@@ -8,6 +8,7 @@
   :root {
     --r: min(68vh, 38vw);      /* record size: everything scales from this */
     --ink: #efe9de;
+    --clock-top: #fff;
     --glow: 140,120,110;       /* overwritten from the album art */
   }
   * { box-sizing: border-box; margin: 0; }
@@ -18,6 +19,7 @@
     -webkit-font-smoothing: antialiased;
   }
   body.light { background: #e9e4d9; --ink: #1b1814; }
+  body.light { --clock-top: #1b1814; }
   body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
   body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
 
@@ -27,6 +29,7 @@
     opacity: 0; transition: opacity 1.4s ease;
   }
   .bg.on { opacity: 1; }
+  body:not(.playing) .bg.on { opacity: .3; } /* dim the tint while paused */
   body.dark .bg, body.light .bg { display: none; }
   .vignette {
     position: fixed; inset: 0; pointer-events: none;
@@ -34,24 +37,83 @@
   }
   body.light .vignette { display: none; }
 
-  /* Small clock (while playing) and big clock (when idle) */
+  /* Idle ambient light: slow drifting color blobs */
+  .aurora {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    opacity: 0; transition: opacity 2.5s ease;
+    background:
+      radial-gradient(ellipse 50% 60% at 20% 30%, rgba(var(--glow), .24), transparent 70%),
+      radial-gradient(ellipse 45% 55% at 80% 70%, rgba(var(--glow), .16), transparent 70%);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes drift { to { transform: translate(-3%, 2%) scale(1.12); } }
+  body.idle .aurora { opacity: 1; }
+
+  /* Small clock (while playing, if enabled) */
   .clock {
     position: fixed; top: 4vh; left: 3vw; z-index: 2;
     font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; letter-spacing: .01em; opacity: .5;
     transition: opacity 1.2s ease;
   }
+
+  /* Big idle clock */
   .big {
     position: fixed; inset: 0; z-index: 3; pointer-events: none;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 1.2s ease;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(.96);
+    transition: opacity 1.4s ease, transform 2s ease;
+  }
+  body.idle .big { opacity: 1; transform: scale(1); }
+  body.idle .clock { opacity: 0; }
+
+  .bigwrap {
+    display: flex; flex-direction: column; align-items: center;
+    animation: sway 45s ease-in-out infinite alternate; /* slow drift, avoids burn-in */
+  }
+  @keyframes sway {
+    from { transform: translate(-1.5vw, -1.5vh); }
+    to   { transform: translate(1.5vw, 1.5vh); }
   }
   .bigtime {
+    display: flex; align-items: baseline;
     font-size: clamp(80px, 22vw, 420px); font-weight: 200; line-height: 1;
     letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, var(--clock-top) 25%, rgb(var(--glow)) 135%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 3vh rgba(var(--glow), .45));
   }
-  .bigdate { margin-top: 2vh; font-size: clamp(16px, 2vw, 36px); font-weight: 400; opacity: .5; }
-  body.idle .big { opacity: 1; }
-  body.idle .clock { opacity: 0; }
+  .bigtime .colon { animation: blink 2s ease-in-out infinite; padding: 0 .02em; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+  .bigtime .ampm {
+    font-size: .16em; font-weight: 400; letter-spacing: .02em;
+    margin-left: .25em; opacity: .7;
+  }
+  .bigdate {
+    margin-top: 2vh; font-size: clamp(14px, 1.6vw, 30px); font-weight: 400;
+    letter-spacing: .22em; text-transform: uppercase; opacity: .55;
+  }
+  .bigsec {
+    width: 26vw; height: 2px; margin-top: 3.5vh; border-radius: 2px; overflow: hidden;
+    background: rgba(255,255,255,.12);
+  }
+  body.light .bigsec { background: rgba(0,0,0,.12); }
+  .bigsec i {
+    display: block; height: 100%; background: rgb(var(--glow));
+    transform-origin: left; transform: scaleX(0);
+    transition: transform 1s linear; box-shadow: 0 0 1.2vh rgba(var(--glow), .9);
+  }
+  .bigtrack {
+    margin-top: 4.5vh; display: flex; align-items: center; gap: 1.2vw;
+    font-size: clamp(13px, 1.2vw, 22px); opacity: 0; transition: opacity 1s ease;
+  }
+  .bigtrack.has { opacity: .6; }
+  .bigart {
+    width: 5vh; height: 5vh; border-radius: 50%; flex: none;
+    background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 0 1.6vh rgba(var(--glow), .5);
+    animation: spin 14s linear infinite;
+  }
 
   .stage {
     position: relative; z-index: 1; width: 100%; height: 100%;
@@ -67,12 +129,13 @@
     position: absolute; inset: -38%; border-radius: 50%; pointer-events: none;
     background: radial-gradient(circle closest-side,
       rgba(var(--glow), .55), rgba(var(--glow), .22) 55%, transparent 100%);
-    opacity: .7;
+    opacity: .1; transition: opacity 1.6s ease;
+    animation: pulse 5s ease-in-out infinite; animation-play-state: paused;
   }
-  body.playing .glow { animation: pulse 5s ease-in-out infinite; }
+  body.playing .glow { opacity: .7; animation-play-state: running; }
   @keyframes pulse {
-    0%, 100% { opacity: .6; transform: scale(1); }
-    50%      { opacity: .95; transform: scale(1.06); }
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
   }
 
   .floor { /* soft shadow under the hovering record */
@@ -123,7 +186,7 @@
       repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
       var(--v);
     box-shadow: inset 0 0 0 calc(var(--r) * .004) var(--lip),
-      0 .8vh 3vh rgba(0,0,0,.55), 0 0 6vh rgba(var(--glow), .3);
+      0 .8vh 3vh rgba(0,0,0,.55);
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
@@ -195,7 +258,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .record { animation-duration: 12s; }
-    .tilt, .floor, body.playing .glow { animation: none; }
+    .tilt, .floor, .glow { animation: none; }
+    .aurora, .bigwrap, .bigtime .colon, .bigart { animation: none; }
   }
 </style>
 </head>
@@ -203,8 +267,19 @@
   <div class="bg" id="bg0"></div>
   <div class="bg" id="bg1"></div>
   <div class="vignette"></div>
+  <div class="aurora"></div>
   <div class="clock" id="clock"></div>
-  <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
+  <div class="big">
+    <div class="bigwrap">
+      <div class="bigtime" id="bigTime"></div>
+      <div class="bigdate" id="bigDate"></div>
+      <div class="bigsec"><i id="bigSec"></i></div>
+      <div class="bigtrack" id="bigTrack">
+        <div class="bigart" id="bigArt"></div>
+        <div id="bigTrackName"></div>
+      </div>
+    </div>
+  </div>
 
   <div class="stage">
     <div class="scene">
@@ -279,18 +354,28 @@ const WORDS = ['bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy', 'cunt', '
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
-const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
 
 // ---------- Clocks ----------
+let lastTime = '';
 function updateClock() {
   const now = new Date();
   const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   $('clock').textContent = time;
-  $('bigTime').textContent = time;
+  if (time !== lastTime) { // only rebuild when the minute changes, so the colon keeps pulsing
+    lastTime = time;
+    const m = time.match(/^(\d+)\D+(\d{2})\s*(.*)$/);
+    $('bigTime').innerHTML = m
+      ? `${m[1]}<span class="colon">:</span>${m[2]}` + (m[3] ? `<span class="ampm">${m[3]}</span>` : '')
+      : time;
+  }
   $('bigDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  const s = now.getSeconds(), bar = $('bigSec');
+  bar.style.transition = s === 0 ? 'none' : '';
+  bar.style.transform = `scaleX(${s / 60})`;
 }
 updateClock();
-setInterval(updateClock, 10000);
+setInterval(updateClock, 1000);
 if (!CONFIG.SHOW_CLOCK) $('clock').style.display = 'none';
 
 // Idle = nothing playing (paused or stopped) for IDLE_SECONDS.
@@ -546,6 +631,11 @@ function render(data) {
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
+
+  // Keep the last track on the idle clock after pause/stop
+  $('bigTrackName').textContent = censor(item.name) + ' \u2014 ' + censor(artist);
+  $('bigArt').style.backgroundImage = art ? `url(${art})` : 'none';
+  $('bigTrack').classList.add('has');
 
   const changed = item.id !== cur.id;
   cur.id = item.id;
