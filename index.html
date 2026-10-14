@@ -355,6 +355,12 @@
     .tilt, .floor, .glow, .eq i, .neontext, .neon.boot, .shelf.soon .qitem:nth-child(1)::after { animation: none; }
     .qitem { animation: none; opacity: var(--qo); transform: rotate(var(--rot)); }
   }
+  #status {
+  position: fixed; left: 14px; bottom: 12px; z-index: 20;
+  font: 12px ui-monospace, Menlo, monospace; opacity: .7;
+  pointer-events: none; display: none; max-width: 70vw;
+}
+#status.show { display: block; }
 </style>
 </head>
 <body>
@@ -426,7 +432,7 @@
       <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
     </div>
   </div>
-
+<div id="status"></div>
 <script>
 // ---------- CONFIG ----------
 const CONFIG = {
@@ -896,6 +902,13 @@ function tick() {
 }
 
 // ---------- Polling ----------
+function setStatus(msg) {
+  const s = $('status');
+  if (!msg) { s.classList.remove('show'); return; }
+  s.textContent = msg;
+  s.classList.add('show');
+}
+
 async function poll() {
   let delay = CONFIG.POLL_MS;
   try {
@@ -904,21 +917,37 @@ async function poll() {
       document.body.classList.add('needs-login');
       document.body.classList.remove('playing');
       setIdle(false);
+      setStatus('No token: click Connect Spotify');
     } else {
       const r = await fetch(
         'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
         { headers: { Authorization: 'Bearer ' + token } }
       );
-      if (r.status === 200) render(await r.json());
-      else if (r.status === 204) render(null);
-      else if (r.status === 401) LS.set('expires_at', '0');
-      else if (r.status === 429) delay = (Number(r.headers.get('Retry-After')) || 10) * 1000;
+      if (r.status === 200) {
+        setStatus('');
+        render(await r.json());
+      } else if (r.status === 204) {
+        setStatus('');
+        render(null);
+      } else if (r.status === 401) {
+        LS.set('expires_at', '0');
+        setStatus('401: token rejected, retrying');
+      } else if (r.status === 429) {
+        delay = (Number(r.headers.get('Retry-After')) || 10) * 1000;
+        setStatus('429: rate limited, waiting ' + Math.round(delay / 1000) + 's');
+      } else {
+        let body = '';
+        try { body = (await r.text()).slice(0, 160); } catch (e) {}
+        setStatus('Spotify returned ' + r.status + ' ' + body);
+        delay = Math.max(delay, 10000);
+      }
     }
-  } catch (e) { /* offline or transient error: try again next tick */ }
+  } catch (e) {
+    setStatus('Error: ' + (e && e.message ? e.message : e));
+  }
   if (idleOn) delay = Math.max(delay, CONFIG.IDLE_POLL_MS); // check less often while idle
   setTimeout(poll, delay);
 }
-
 // Token handed over from a normal browser (see ?setup flow). Only used if this page isn't logged in yet.
 const hashRt = location.hash.match(/rt=([^&]+)/);
 if (hashRt) {
