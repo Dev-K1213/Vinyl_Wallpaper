@@ -30,15 +30,31 @@
   }
   body.light .vignette { display: none; }
 
+  /* Small clock (while playing) and big clock (when idle) */
   .clock {
     position: fixed; top: 4vh; left: 3vw; z-index: 2;
     font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; letter-spacing: .01em; opacity: .5;
+    transition: opacity 1.2s ease;
   }
+  .big {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  .bigtime {
+    font-size: clamp(80px, 22vw, 420px); font-weight: 200; line-height: 1;
+    letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  }
+  .bigdate { margin-top: 2vh; font-size: clamp(16px, 2vw, 36px); font-weight: 400; opacity: .5; }
+  body.idle .big { opacity: 1; }
+  body.idle .clock { opacity: 0; }
 
   .stage {
     position: relative; z-index: 1; height: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 6vw;
+    display: flex; align-items: center; justify-content: center; gap: 8vw;
+    transition: opacity 1.2s ease;
   }
+  body.idle .stage { opacity: 0; }
 
   /* Record */
   .disc { position: relative; width: var(--size); aspect-ratio: 1; flex: none;
@@ -79,6 +95,31 @@
             mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
   }
 
+  /* Tonearm: pivots at the top right of the record.
+     Tune the two rotate() angles below if the needle lands in the wrong place. */
+  .pivot {
+    position: absolute; left: 101.5%; top: -6.5%; width: 9%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #5a564f, #1c1a18 70%);
+    box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.5);
+  }
+  .arm {
+    position: absolute; left: 56%; top: -2.9%; width: 50%; height: 1.8%; border-radius: 1vmin;
+    background: linear-gradient(#ddd8ce, #8d8981);
+    box-shadow: 0 .8vh 1.6vh rgba(0,0,0,.45);
+    transform-origin: 100% 50%;
+    transform: rotate(6deg);                 /* resting: needle off the record */
+    transition: transform 1.6s cubic-bezier(.45, .05, .25, 1);
+  }
+  body.playing .arm { transform: rotate(-35deg); }  /* playing: needle on the grooves */
+  .arm::before { /* headshell */
+    content: ""; position: absolute; left: -2%; top: -70%; width: 11%; height: 240%;
+    border-radius: .5vmin; background: linear-gradient(#2b2825, #14120f);
+  }
+  .arm::after { /* counterweight */
+    content: ""; position: absolute; right: -9%; top: -60%; width: 12%; height: 220%;
+    border-radius: .8vmin; background: linear-gradient(#3a3733, #1a1816);
+  }
+
   /* Right column: lyrics in the middle, track info at the bottom */
   .side {
     width: 28vw; height: var(--size);
@@ -88,7 +129,6 @@
     flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2.2vh;
     padding-right: 1vw;
   }
-  .lyrics div { transition: opacity .4s ease; }
   .l0, .l2 { font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; line-height: 1.3; opacity: .28; }
   .l1 { font-size: clamp(20px, 2.3vw, 44px); font-weight: 600; line-height: 1.2; letter-spacing: -.015em; }
   .l1.rise { animation: rise .45s ease; }
@@ -128,6 +168,7 @@
   <div class="bg" id="bg1"></div>
   <div class="vignette"></div>
   <div class="clock" id="clock"></div>
+  <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
 
   <div class="stage">
     <div class="disc">
@@ -136,6 +177,8 @@
         <div class="hole"></div>
       </div>
       <div class="sheen"></div>
+      <div class="pivot"></div>
+      <div class="arm"></div>
     </div>
 
     <div class="side">
@@ -162,12 +205,15 @@
 // ---------- CONFIG ----------
 const CONFIG = {
   CLIENT_ID: '7accde9c16c942b0b671362deca8a31a',
-  VINYL: 'white',        // 'black' | 'white'
+  VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
   BACKGROUND: 'art',     // 'art' (blurred album art) | 'dark' | 'light'
   SHOW_PROGRESS: true,   // thin progress line under the track
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
   SHOW_CLOCK: true,      // small clock, top left
+  IDLE_CLOCK: true,      // big clock when nothing has played for a few seconds
+  CENSOR: true,          // replace explicit words with ***
+  EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
   POLL_MS: 3000
 };
 // ----------------------------
@@ -186,12 +232,40 @@ document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) document.querySelector('.bar').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 
-// ---------- Clock ----------
+// ---------- Censoring ----------
+const CONTAINS = ['fuck', 'shit'];
+const WORDS = ['bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy', 'cunt', 'whore', 'slut',
+  'ass', 'jackass', 'dumbass', 'badass', "nigga", "nigger"];
+const censorRe = new RegExp(
+  '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
+  [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
+
+// ---------- Clocks ----------
 function updateClock() {
-  $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  $('clock').textContent = time;
+  $('bigTime').textContent = time;
+  $('bigDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
 }
-if (CONFIG.SHOW_CLOCK) { updateClock(); setInterval(updateClock, 10000); }
-else $('clock').style.display = 'none';
+updateClock();
+setInterval(updateClock, 10000);
+if (!CONFIG.SHOW_CLOCK) $('clock').style.display = 'none';
+
+let idleTimer = null;
+function setIdle(on) {
+  if (!CONFIG.IDLE_CLOCK) return;
+  if (on) {
+    if (!idleTimer && !document.body.classList.contains('idle')) {
+      idleTimer = setTimeout(() => document.body.classList.add('idle'), 8000);
+    }
+  } else {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+    document.body.classList.remove('idle');
+  }
+}
 
 // ---------- Spotify auth (PKCE, no client secret needed) ----------
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -258,6 +332,42 @@ async function getToken() {
   }
 }
 
+// ---------- Vinyl color from album art ----------
+function extractColor(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 24;
+        const x = c.getContext('2d');
+        x.drawImage(img, 0, 0, 24, 24);
+        const d = x.getImageData(0, 0, 24, 24).data;
+        let r = 0, g = 0, b = 0, w = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const s = Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
+          const wt = s * s + 1; // vivid pixels count more than grays
+          r += d[i] * wt; g += d[i + 1] * wt; b += d[i + 2] * wt; w += wt;
+        }
+        resolve([r / w, g / w, b / w]);
+      } catch (e) { resolve(null); } // canvas blocked by CORS
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+function applyVinyl(rgb) {
+  const s = document.body.style;
+  if (!rgb) { ['--v', '--groove', '--gap', '--lip'].forEach(k => s.removeProperty(k)); return; }
+  const [r, g, b] = rgb.map(v => Math.round(v * .45));
+  s.setProperty('--v', `rgb(${r},${g},${b})`);
+  s.setProperty('--groove', 'rgba(255,255,255,.035)');
+  s.setProperty('--gap', 'rgba(0,0,0,.5)');
+  s.setProperty('--lip', 'rgba(255,255,255,.09)');
+}
+
 // ---------- Lyrics (LRCLIB, synced) ----------
 const lyricsCache = new Map();
 let lyrics = [], lyricIdx = -9;
@@ -267,7 +377,7 @@ function parseLRC(text) {
   for (const raw of text.split('\n')) {
     const stamps = [...raw.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
     if (!stamps.length) continue;
-    const line = raw.replace(/\[[^\]]*\]/g, '').trim();
+    const line = censor(raw.replace(/\[[^\]]*\]/g, '').trim());
     stamps.forEach(m => out.push({ t: Number(m[1]) * 60 + Number(m[2]), text: line }));
   }
   return out.sort((a, b) => a.t - b.t);
@@ -335,6 +445,10 @@ function setArt(url) {
   layers[layer].classList.add('on');
   layers[layer ^ 1].classList.remove('on');
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
+  if (CONFIG.VINYL === 'art') {
+    if (url) extractColor(url).then(c => { if (lastArt === url) applyVinyl(c); });
+    else applyVinyl(null);
+  }
 }
 
 function render(data) {
@@ -344,8 +458,10 @@ function render(data) {
     cur.playing = false;
     document.body.classList.remove('playing');
     $('info').classList.add('hidden');
+    setIdle(true);
     return;
   }
+  setIdle(false);
   const art = (item.album && item.album.images && item.album.images[0] && item.album.images[0].url)
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
@@ -365,8 +481,8 @@ function render(data) {
     $('info').classList.add('hidden');
     $('fill').style.transition = 'none';
     setTimeout(() => {
-      $('title').textContent = item.name;
-      $('artist').textContent = artist;
+      $('title').textContent = censor(item.name);
+      $('artist').textContent = censor(artist);
       $('info').classList.remove('hidden');
     }, $('title').textContent ? 350 : 0);
     tick();
@@ -397,6 +513,7 @@ async function poll() {
     if (!token) {
       document.body.classList.add('needs-login');
       document.body.classList.remove('playing');
+      setIdle(false);
     } else {
       const r = await fetch(
         'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
