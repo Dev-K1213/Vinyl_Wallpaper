@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vinyl Wallpaper</title>
 <style>
-  :root { --size: min(84vh, 58vw); --ink: #efe9de; }
+  :root { --h: min(76vh, 44vw); --ink: #efe9de; }
   * { box-sizing: border-box; margin: 0; }
   html, body {
     height: 100%; overflow: hidden;
@@ -26,7 +26,7 @@
   body.dark .bg, body.light .bg { display: none; }
   .vignette {
     position: fixed; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 38% 50%, transparent 25%, rgba(0,0,0,.6) 100%);
+    background: radial-gradient(ellipse at 40% 50%, transparent 25%, rgba(0,0,0,.6) 100%);
   }
   body.light .vignette { display: none; }
 
@@ -37,7 +37,7 @@
     transition: opacity 1.2s ease;
   }
   .big {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     opacity: 0; transition: opacity 1.2s ease;
   }
@@ -51,14 +51,32 @@
 
   .stage {
     position: relative; z-index: 1; height: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 8vw;
+    display: flex; align-items: center; justify-content: center; gap: 4vw;
     transition: opacity 1.2s ease;
   }
   body.idle .stage { opacity: 0; }
 
-  /* Record */
-  .disc { position: relative; width: var(--size); aspect-ratio: 1; flex: none;
-    filter: drop-shadow(0 4vh 7vh rgba(0,0,0,.6)); }
+  /* ---------- Turntable ---------- */
+  .deck {
+    position: relative; flex: none; width: calc(var(--h) * 1.3); height: var(--h);
+    border-radius: calc(var(--h) * .035);
+    background:
+      repeating-linear-gradient(92deg, rgba(255,255,255,.02) 0 1px, transparent 1px 5px,
+        rgba(0,0,0,.06) 5px 6px, transparent 6px 13px),
+      linear-gradient(160deg, #3b2b1f, #251912 55%, #1a110b);
+    box-shadow: 0 5vh 9vh rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.12), inset 0 -2px 0 rgba(0,0,0,.45);
+  }
+  .platter {
+    position: absolute; left: calc(var(--h) * .05); top: calc(var(--h) * .05);
+    width: calc(var(--h) * .9); height: calc(var(--h) * .9); border-radius: 50%;
+    background: conic-gradient(#8c8882, #4d4a45, #a09c95, #44413d, #8c8882);
+    box-shadow: 0 .8vh 2vh rgba(0,0,0,.6), inset 0 0 0 calc(var(--h) * .006) rgba(0,0,0,.5);
+  }
+  .disc {
+    position: absolute; left: calc(var(--h) * .07); top: calc(var(--h) * .07);
+    width: calc(var(--h) * .86); height: calc(var(--h) * .86);
+  }
   .record {
     position: absolute; inset: 0; border-radius: 50%;
     background:
@@ -70,7 +88,7 @@
         var(--gap) 88% 88.5%, transparent 88.5%),
       repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
       var(--v);
-    box-shadow: inset 0 0 0 .45vmin var(--lip);
+    box-shadow: inset 0 0 0 calc(var(--h) * .004) var(--lip), 0 .4vh 1.2vh rgba(0,0,0,.5);
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
@@ -95,44 +113,93 @@
             mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
   }
 
-  /* Tonearm: pivots at the top right of the record.
-     Tune the two rotate() angles below if the needle lands in the wrong place. */
-  .pivot {
-    position: absolute; left: 101.5%; top: -6.5%; width: 9%; aspect-ratio: 1; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #5a564f, #1c1a18 70%);
-    box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.5);
+  /* Tonearm: pivot sits top right of the deck. Tune the two rotate() angles if the needle lands off. */
+  .armwrap { position: absolute; left: calc(var(--h) * 1.12); top: calc(var(--h) * .2); width: 0; height: 0; }
+  .base {
+    position: absolute; width: calc(var(--h) * .11); height: calc(var(--h) * .11);
+    left: calc(var(--h) * -.055); top: calc(var(--h) * -.055); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #7b766e, #2a2724 70%);
+    box-shadow: 0 .7vh 1.6vh rgba(0,0,0,.55), inset 0 0 0 calc(var(--h) * .004) rgba(255,255,255,.12);
   }
   .arm {
-    position: absolute; left: 56%; top: -2.9%; width: 50%; height: 1.8%; border-radius: 1vmin;
-    background: linear-gradient(#ddd8ce, #8d8981);
-    box-shadow: 0 .8vh 1.6vh rgba(0,0,0,.45);
+    position: absolute; right: 0; top: calc(var(--h) * -.0065);
+    width: calc(var(--h) * .386); height: calc(var(--h) * .013); border-radius: 99px;
+    background: linear-gradient(#e6e1d6, #8f8b83);
+    box-shadow: 0 .7vh 1.4vh rgba(0,0,0,.5);
     transform-origin: 100% 50%;
-    transform: rotate(6deg);                 /* resting: needle off the record */
-    transition: transform 1.6s cubic-bezier(.45, .05, .25, 1);
+    transform: rotate(-67deg);                       /* resting: needle off the record */
+    transition: transform 1.8s cubic-bezier(.45, .05, .25, 1);
   }
-  body.playing .arm { transform: rotate(-35deg); }  /* playing: needle on the grooves */
+  body.playing .arm { transform: rotate(-10.5deg); } /* playing: needle on the grooves */
   .arm::before { /* headshell */
-    content: ""; position: absolute; left: -2%; top: -70%; width: 11%; height: 240%;
-    border-radius: .5vmin; background: linear-gradient(#2b2825, #14120f);
+    content: ""; position: absolute; left: calc(var(--h) * -.06); top: calc(var(--h) * -.0125);
+    width: calc(var(--h) * .075); height: calc(var(--h) * .038);
+    background: linear-gradient(#2c2926, #12100e); border-radius: calc(var(--h) * .006);
+    transform: rotate(14deg); transform-origin: right center;
   }
   .arm::after { /* counterweight */
-    content: ""; position: absolute; right: -9%; top: -60%; width: 12%; height: 220%;
-    border-radius: .8vmin; background: linear-gradient(#3a3733, #1a1816);
+    content: ""; position: absolute; right: calc(var(--h) * -.075); top: calc(var(--h) * -.0125);
+    width: calc(var(--h) * .07); height: calc(var(--h) * .038);
+    background: linear-gradient(#4a4642, #1c1a18); border-radius: calc(var(--h) * .01);
+  }
+  .cap {
+    position: absolute; width: calc(var(--h) * .05); height: calc(var(--h) * .05);
+    left: calc(var(--h) * -.025); top: calc(var(--h) * -.025); border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #d9d4c9, #6c685f 75%);
+    box-shadow: 0 .3vh .8vh rgba(0,0,0,.5);
   }
 
-  /* Right column: lyrics in the middle, track info at the bottom */
+  /* Controls */
+  .knob {
+    position: absolute; left: calc(var(--h) * 1.055); top: calc(var(--h) * .675);
+    width: calc(var(--h) * .13); height: calc(var(--h) * .13); border-radius: 50%;
+    background: conic-gradient(#b9b4aa, #6d6962, #c9c4ba, #5f5b55, #b9b4aa);
+    box-shadow: 0 .6vh 1.4vh rgba(0,0,0,.55), inset 0 0 0 calc(var(--h) * .005) rgba(0,0,0,.35);
+    transition: transform 1.2s cubic-bezier(.4, 0, .2, 1);
+  }
+  .knob::after {
+    content: ""; position: absolute; left: 47.5%; top: 9%; width: 5%; height: 26%;
+    border-radius: 2px; background: #1a1816;
+  }
+  body.playing .knob { transform: rotate(55deg); }
+  .led {
+    position: absolute; left: calc(var(--h) * 1.108); top: calc(var(--h) * .588);
+    width: calc(var(--h) * .024); height: calc(var(--h) * .024); border-radius: 50%;
+    background: #3a1512; transition: background .4s, box-shadow .4s;
+  }
+  body.playing .led { background: #ff6a45; box-shadow: 0 0 1.6vh #ff6a45; }
+  .spd {
+    position: absolute; top: calc(var(--h) * .8675);
+    width: calc(var(--h) * .065); height: calc(var(--h) * .065); border-radius: 50%;
+    background: linear-gradient(#3d3a36, #1c1a18); color: #8d877c;
+    font-size: calc(var(--h) * .024); font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 .4vh 1vh rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  .spd.a { left: calc(var(--h) * 1.0175); color: #ffb86b; }
+  .spd.b { left: calc(var(--h) * 1.1575); }
+
+  /* ---------- Right column ---------- */
   .side {
-    width: 28vw; height: var(--size);
+    width: 26vw; height: var(--h);
     display: flex; flex-direction: column; justify-content: space-between;
   }
   .lyrics {
-    flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2.2vh;
-    padding-right: 1vw;
+    flex: 1; position: relative; overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+            mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
   }
-  .l0, .l2 { font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; line-height: 1.3; opacity: .28; }
-  .l1 { font-size: clamp(20px, 2.3vw, 44px); font-weight: 600; line-height: 1.2; letter-spacing: -.015em; }
-  .l1.rise { animation: rise .45s ease; }
-  @keyframes rise { from { opacity: 0; transform: translateY(1.2vh); } to { opacity: 1; transform: none; } }
+  .lyricList {
+    position: absolute; left: 0; right: 0; top: 0; padding-right: 1vw;
+    transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform;
+  }
+  .ll {
+    font-size: clamp(17px, 1.9vw, 36px); font-weight: 600; line-height: 1.22; letter-spacing: -.012em;
+    padding: 1.1vh 0; opacity: .2; transform: scale(.9); transform-origin: left center;
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .ll.near { opacity: .38; }
+  .ll.on { opacity: 1; transform: scale(1); }
 
   .info { margin-bottom: 1vh; transition: opacity .5s ease; }
   .info.hidden { opacity: 0; }
@@ -149,7 +216,7 @@
     background: var(--ink); color: #0b0a09; cursor: pointer;
   }
   body.needs-login #connect { display: block; }
-  body.needs-login .side, body.setup .side { display: none; }
+  body.needs-login .side, body.setup .side, body.needs-login .deck, body.setup .deck { display: none; }
   body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
   body.needs-login #connect { cursor: pointer; }
 
@@ -171,22 +238,30 @@
   <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
 
   <div class="stage">
-    <div class="disc">
-      <div class="record">
-        <div class="label" id="label"></div>
-        <div class="hole"></div>
+    <div class="deck">
+      <div class="platter"></div>
+      <div class="disc">
+        <div class="record">
+          <div class="label" id="label"></div>
+          <div class="hole"></div>
+        </div>
+        <div class="sheen"></div>
       </div>
-      <div class="sheen"></div>
-      <div class="pivot"></div>
-      <div class="arm"></div>
+
+      <div class="led"></div>
+      <div class="knob"></div>
+      <div class="spd a">33</div>
+      <div class="spd b">45</div>
+
+      <div class="armwrap">
+        <div class="base"></div>
+        <div class="arm"></div>
+        <div class="cap"></div>
+      </div>
     </div>
 
     <div class="side">
-      <div class="lyrics" id="lyrics">
-        <div class="l0" id="l0"></div>
-        <div class="l1" id="l1"></div>
-        <div class="l2" id="l2"></div>
-      </div>
+      <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
       <div class="info hidden" id="info">
         <div class="title" id="title"></div>
         <div class="artist" id="artist"></div>
@@ -211,7 +286,8 @@ const CONFIG = {
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
   SHOW_CLOCK: true,      // small clock, top left
-  IDLE_CLOCK: true,      // big clock when nothing has played for a few seconds
+  IDLE_CLOCK: true,      // big clock when music is paused or stopped
+  IDLE_SECONDS: 10,      // how long music must be stopped before the big clock appears
   CENSOR: true,          // replace explicit words with ***
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
   POLL_MS: 3000
@@ -235,11 +311,11 @@ if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 // ---------- Censoring ----------
 const CONTAINS = ['fuck', 'shit'];
 const WORDS = ['bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy', 'cunt', 'whore', 'slut',
-  'ass', 'jackass', 'dumbass', 'badass', "nigga", "nigger"];
+  'piss', 'ass', 'jackass', 'dumbass', 'badass','nigga','nigger'];
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
-const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
 
 // ---------- Clocks ----------
 function updateClock() {
@@ -253,12 +329,13 @@ updateClock();
 setInterval(updateClock, 10000);
 if (!CONFIG.SHOW_CLOCK) $('clock').style.display = 'none';
 
+// Idle = nothing playing (paused or stopped) for IDLE_SECONDS.
 let idleTimer = null;
 function setIdle(on) {
   if (!CONFIG.IDLE_CLOCK) return;
   if (on) {
-    if (!idleTimer && !document.body.classList.contains('idle')) {
-      idleTimer = setTimeout(() => document.body.classList.add('idle'), 8000);
+    if (!idleTimer) {
+      idleTimer = setTimeout(() => document.body.classList.add('idle'), CONFIG.IDLE_SECONDS * 1000);
     }
   } else {
     clearTimeout(idleTimer);
@@ -368,9 +445,10 @@ function applyVinyl(rgb) {
   s.setProperty('--lip', 'rgba(255,255,255,.09)');
 }
 
-// ---------- Lyrics (LRCLIB, synced) ----------
+// ---------- Lyrics (LRCLIB, synced, scrolling list) ----------
 const lyricsCache = new Map();
-let lyrics = [], lyricIdx = -9;
+const listEl = $('lyricList');
+let lyrics = [], lyricIdx = -8;
 
 function parseLRC(text) {
   const out = [];
@@ -405,32 +483,44 @@ async function fetchLyrics(item) {
   return result;
 }
 
-function setLines(prev, cur, next) {
-  $('l0').textContent = prev;
-  $('l2').textContent = next;
-  const el = $('l1');
-  el.textContent = cur;
-  el.classList.remove('rise');
-  void el.offsetWidth;
-  el.classList.add('rise');
+// Mark the active line and slide the whole list so it sits in the middle.
+function focusLine(i, snap) {
+  const els = listEl.children;
+  if (!els.length) return;
+  for (let k = 0; k < els.length; k++) {
+    const d = Math.abs(k - i);
+    els[k].className = 'll' + (d === 0 ? ' on' : d === 1 ? ' near' : '');
+  }
+  const target = els[Math.max(i, 0)];
+  const y = $('lyrics').clientHeight / 2 - (target.offsetTop + target.offsetHeight / 2);
+  if (snap) listEl.style.transition = 'none';
+  listEl.style.transform = `translateY(${y}px)`;
+  if (snap) { void listEl.offsetWidth; listEl.style.transition = ''; }
+}
+
+function buildList() {
+  listEl.innerHTML = '';
+  lyrics.forEach(l => {
+    const d = document.createElement('div');
+    d.className = 'll';
+    d.textContent = l.text || '\u266A';
+    listEl.appendChild(d);
+  });
+  focusLine(-1, true);
 }
 
 function lyricTick() {
-  if (!CONFIG.SHOW_LYRICS) return;
-  if (!lyrics.length) {
-    if (lyricIdx !== -9) { setLines('', '', ''); lyricIdx = -9; }
-    return;
-  }
+  if (!CONFIG.SHOW_LYRICS || !lyrics.length) return;
   const ms = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
   const p = ms / 1000 + CONFIG.LYRICS_OFFSET;
   let i = -1;
   for (let k = 0; k < lyrics.length && lyrics[k].t <= p; k++) i = k;
   if (i === lyricIdx) return;
   lyricIdx = i;
-  const at = n => (lyrics[n] ? lyrics[n].text : '');
-  setLines(at(i - 1), i >= 0 ? (at(i) || '\u266A') : '', at(i + 1));
+  focusLine(i, false);
 }
 setInterval(lyricTick, 250);
+window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
 // ---------- Rendering ----------
 let lastArt = null, layer = 0;
@@ -461,7 +551,6 @@ function render(data) {
     setIdle(true);
     return;
   }
-  setIdle(false);
   const art = (item.album && item.album.images && item.album.images[0] && item.album.images[0].url)
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
@@ -476,6 +565,7 @@ function render(data) {
 
   setArt(art);
   document.body.classList.toggle('playing', cur.playing);
+  setIdle(!cur.playing); // paused counts as idle too
 
   if (changed) {
     $('info').classList.add('hidden');
@@ -488,10 +578,10 @@ function render(data) {
     tick();
     requestAnimationFrame(() => requestAnimationFrame(() => { $('fill').style.transition = ''; }));
 
-    lyrics = []; lyricIdx = -8; lyricTick();
+    lyrics = []; lyricIdx = -8; buildList();
     if (CONFIG.SHOW_LYRICS && item.type === 'track') {
       fetchLyrics(item).then(l => {
-        if (cur.id === item.id) { lyrics = l; lyricIdx = -8; lyricTick(); }
+        if (cur.id === item.id) { lyrics = l; lyricIdx = -8; buildList(); lyricTick(); }
       });
     }
   } else {
