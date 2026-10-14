@@ -188,35 +188,34 @@
   }
   .lyrics {
     flex: 1; position: relative; overflow: hidden;
-    margin: 0 -6vh; /* extra room so the text glow isn't clipped into a bar */
     -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
             mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
   }
   .lyricList {
-    position: absolute; left: 0; right: 0; top: 0; padding: 0 6vh;
-    transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform;
+    position: absolute; left: 0; right: 0; top: 0; padding-right: 1vw;
+    transition: transform .85s cubic-bezier(.3, .7, .2, 1);
   }
+  /* No filters or text-shadows here: they get clipped into hard vertical edges on long lines */
   .ll {
     font-size: clamp(22px, 2.7vw, 56px); font-weight: 600; line-height: 1.16; letter-spacing: -.018em;
     padding: 1.4vh 0; opacity: .2; transform: scale(.9); transform-origin: left center;
-    filter: blur(3px);
-    transition: opacity .6s ease, transform .6s ease, filter .6s ease, text-shadow .6s ease;
+    transition: opacity .6s ease, transform .6s ease, color .6s ease;
   }
-  .ll.near { opacity: .4; filter: blur(1.2px); }
+  .ll.near { opacity: .4; }
   .ll.on {
-    opacity: 1; transform: scale(1); filter: none;
-    text-shadow: 0 0 3vh rgba(var(--glow), .55);
+    opacity: 1; transform: scale(1);
+    color: color-mix(in srgb, var(--ink) 80%, rgb(var(--glow)));
   }
 
   /* Shown instead of lyrics when a song has none: album name as big outlined text */
-  .nolyrics {
-    position: absolute; inset: 0; padding: 0 6vh;
+  .albumword {
+    position: absolute; inset: 0;
     display: flex; align-items: center;
     font-size: clamp(38px, 5.4vw, 108px); font-weight: 700; line-height: 1.02; letter-spacing: -.04em;
     color: transparent; -webkit-text-stroke: 1.5px rgba(var(--glow), .5);
     overflow: hidden; opacity: 0; transition: opacity 1s ease;
   }
-  body.nolyrics .nolyrics { opacity: 1; }
+  body.no-lyrics .albumword { opacity: 1; }
 
   .info { margin-top: 2vh; transition: opacity .5s ease; }
   .info.hidden { opacity: 0; }
@@ -246,6 +245,34 @@
     margin-top: 2vh; font-size: clamp(12px, 1.05vw, 20px); opacity: .45;
     font-variant-numeric: tabular-nums; letter-spacing: .06em;
   }
+
+  /* ---------- Up next (bottom-right corner) ---------- */
+  .next {
+    position: fixed; right: 3vw; bottom: 3vh; z-index: 5; max-width: 25vw;
+    display: flex; align-items: center; gap: 1.1vw;
+    padding: .9vh 1.4vh .9vh .9vh; border-radius: 1.4vh;
+    background: rgba(255,255,255,.05);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 1vh 3vh rgba(0,0,0,.35);
+    opacity: 0; transform: translateY(1vh);
+    transition: opacity .6s ease, transform .6s ease;
+    pointer-events: none;
+  }
+  .next.has { opacity: 1; transform: none; }
+  body.idle .next { opacity: 0; }
+  body.needs-login .next, body.setup .next { display: none; }
+  .nextart {
+    width: 6vh; height: 6vh; flex: none; border-radius: .9vh;
+    background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 0 2vh rgba(var(--glow), .35);
+  }
+  .nexttext { min-width: 0; }
+  .nextlabel {
+    font-size: clamp(9px, .75vw, 14px); font-weight: 600; letter-spacing: .26em;
+    text-transform: uppercase; opacity: .5;
+  }
+  .nexttitle, .nextartist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nexttitle { margin-top: .4vh; font-size: clamp(13px, 1.1vw, 21px); font-weight: 600; letter-spacing: -.01em; }
+  .nextartist { margin-top: .2vh; font-size: clamp(11px, .9vw, 17px); opacity: .55; }
 
   /* Login + setup states */
   #connect {
@@ -304,7 +331,7 @@
     <div class="side">
       <div class="lyrics" id="lyrics">
         <div class="lyricList" id="lyricList"></div>
-        <div class="nolyrics" id="noLyrics"></div>
+        <div class="albumword" id="noLyrics"></div>
       </div>
       <div class="info hidden" id="info">
         <div class="eyebrow">
@@ -322,6 +349,15 @@
     <div id="transfer">
       Connected. Copy this whole link and paste it as the website URL in Plash.
       <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
+    </div>
+  </div>
+
+  <div class="next" id="next">
+    <div class="nextart" id="nextArt"></div>
+    <div class="nexttext">
+      <div class="nextlabel">Up next</div>
+      <div class="nexttitle" id="nextTitle"></div>
+      <div class="nextartist" id="nextArtist"></div>
     </div>
   </div>
 
@@ -360,6 +396,7 @@ document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
+if (CONFIG.SHOW_NEXT === false) $('next').style.display = 'none'; // "Up next" is on unless you add SHOW_NEXT: false
 
 // ---------- Censoring ----------
 const CONTAINS = ['nigga', 'nigger'];
@@ -367,7 +404,7 @@ const WORDS = ['nigga', 'nigger'];
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
-const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
 
 // ---------- Idle animation (canvas) ----------
 const cv = $('idleCanvas');
@@ -722,6 +759,41 @@ function lyricTick() {
 setInterval(lyricTick, 250);
 window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
+// ---------- Up next (Spotify queue) ----------
+let nextKey = '';
+function showNext(n) {
+  const el = $('next');
+  const key = n ? String(n.id) : '';
+  if (key === nextKey) return;
+  nextKey = key;
+  el.classList.remove('has');
+  if (!n) return;
+  setTimeout(() => { // let the old card fade out before swapping content
+    if (nextKey !== key) return;
+    const imgs = (n.album && n.album.images) || n.images || [];
+    const thumb = (imgs[1] || imgs[0] || {}).url;
+    const who = n.artists ? n.artists.map(a => a.name).join(', ') : (n.show && n.show.publisher) || '';
+    $('nextTitle').textContent = censor(n.name);
+    $('nextArtist').textContent = censor(who);
+    $('nextArt').style.backgroundImage = thumb ? `url(${thumb})` : 'none';
+    el.classList.add('has');
+  }, 450);
+}
+
+async function fetchNext() {
+  if (CONFIG.SHOW_NEXT === false) return;
+  try {
+    const token = await getToken();
+    if (!token) return;
+    const r = await fetch('https://api.spotify.com/v1/me/player/queue',
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) return; // rate limited or unavailable: keep what's showing
+    const d = await r.json();
+    showNext(d.queue && d.queue.length ? d.queue[0] : null);
+  } catch (e) { /* offline: try again later */ }
+}
+setInterval(() => { if (cur.playing) fetchNext(); }, 30000);
+
 // ---------- Rendering ----------
 let lastArt = null, layer = 0;
 const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
@@ -802,17 +874,19 @@ function render(data) {
     tick();
     requestAnimationFrame(() => requestAnimationFrame(() => { $('ringFill').style.transition = ''; }));
 
+    setTimeout(fetchNext, 1500); // queue updates a moment after the track changes
+
     lyrics = []; lyricIdx = -8; buildList();
-    document.body.classList.remove('nolyrics');
+    document.body.classList.remove('no-lyrics');
     $('noLyrics').textContent = censor(albumName);
     if (CONFIG.SHOW_LYRICS && item.type === 'track') {
       fetchLyrics(item).then(l => {
         if (cur.id !== item.id) return;
         lyrics = l; lyricIdx = -8; buildList(); lyricTick();
-        document.body.classList.toggle('nolyrics', !l.length);
+        document.body.classList.toggle('no-lyrics', !l.length);
       });
     } else if (CONFIG.SHOW_LYRICS) {
-      document.body.classList.add('nolyrics'); // podcasts etc.
+      document.body.classList.add('no-lyrics'); // podcasts etc.
     }
   } else {
     $('info').classList.remove('hidden');
