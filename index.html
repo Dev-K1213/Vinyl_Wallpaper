@@ -362,7 +362,7 @@ if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
 
 // ---------- Censoring ----------
-const CONTAINS = [];
+const CONTAINS = ['nigga', 'nigger'];
 const WORDS = ['nigga', 'nigger'];
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
