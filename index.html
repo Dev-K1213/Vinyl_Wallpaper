@@ -6,7 +6,7 @@
 <title>Vinyl Wallpaper</title>
 <style>
   :root {
-    --s: min(92vh, 54vw);   /* sleeve size: the whole composition scales from this */
+    --s: min(88vh, 46vw);   /* sleeve size: the whole composition scales from this */
     --h: 76vh;              /* height of the lyrics column */
     --ink: #efe9de;
   }
@@ -62,7 +62,7 @@
 
   /* ---------- Sleeve + record (bleeds off the left edge) ---------- */
   .art {
-    position: absolute; top: 50%; left: calc(var(--s) * -.14);
+    position: absolute; top: 50%; left: calc(var(--s) * -.05);
     width: calc(var(--s) * 1.4); height: var(--s);
     transform: translateY(-50%);
   }
@@ -130,8 +130,10 @@
 
   /* ---------- Right column ---------- */
   .side {
-    position: absolute; right: 4vw; top: 50%; transform: translateY(-50%);
-    width: clamp(240px, calc(100vw - var(--s) * 1.28 - 6vw), 34vw); height: var(--h);
+    position: absolute; top: 50%; transform: translateY(-50%);
+    left: calc(var(--s) * 1.15 + 3vw);   /* starts just past the record */
+    right: 4vw;
+    height: min(var(--h), 90vh);
     display: flex; flex-direction: column; justify-content: space-between;
   }
   .lyrics {
