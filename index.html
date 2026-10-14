@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vinyl Wallpaper</title>
+<style>
+  :root { --size: min(80vh, 56vw); }
+  * { box-sizing: border-box; margin: 0; }
+  html, body {
+    height: 100%; overflow: hidden; cursor: none;
+    background: #0d0c0b; color: #f4efe6;
+    font-family: "Avenir Next", "Helvetica Neue", Helvetica, sans-serif;
+  }
+  body.light { background: #ece7dc; color: #1b1814; }
+  body.white-vinyl { --v: #e8e4da; --groove: rgba(0,0,0,.07); --lip: rgba(0,0,0,.18); }
+  body:not(.white-vinyl) { --v: #0f0e0d; --groove: rgba(255,255,255,.045); --lip: rgba(255,255,255,.08); }
+
+  .bg {
+    position: fixed; inset: -12%; background-size: cover; background-position: center;
+    filter: blur(70px) saturate(1.35) brightness(.5);
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  .bg.on { opacity: 1; }
+  body.dark .bg, body.light .bg { display: none; }
+
+  .stage {
+    position: relative; z-index: 1; height: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 6vw;
+  }
+
+  .disc { position: relative; width: var(--size); aspect-ratio: 1; flex: none;
+    filter: drop-shadow(0 3vh 6vh rgba(0,0,0,.55)); }
+  .record {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: repeating-radial-gradient(circle, var(--groove) 0 1px, transparent 1px 4px), var(--v);
+    box-shadow: inset 0 0 0 .5vmin var(--lip);
+    animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
+    animation-play-state: paused;
+  }
+  body.playing .record { animation-play-state: running; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .label {
+    position: absolute; inset: 32%; border-radius: 50%;
+    background: #6b5d4f center / cover no-repeat;
+    box-shadow: 0 0 0 .4vmin rgba(0,0,0,.35);
+  }
+  .hole { position: absolute; inset: 48.5%; border-radius: 50%; background: #0d0c0b; }
+  .sheen {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(from 25deg,
+      transparent 0 6%, rgba(255,255,255,.16) 12%, transparent 20% 56%,
+      rgba(255,255,255,.1) 63%, transparent 70%);
+  }
+
+  .info { max-width: 26vw; transition: opacity .6s ease; }
+  .info.hidden { opacity: 0; }
+  .title { font-size: clamp(22px, 3.2vw, 60px); font-weight: 600; line-height: 1.1; letter-spacing: -.01em; }
+  .artist { margin-top: 1.2vh; font-size: clamp(14px, 1.6vw, 30px); opacity: .7; }
+
+  #connect {
+    display: none; cursor: pointer; font: inherit; font-size: 20px;
+    padding: 14px 28px; border-radius: 999px; border: 0;
+    background: #1db954; color: #04130a; font-weight: 600;
+  }
+  body.needs-login #connect { display: block; cursor: pointer; }
+  body.needs-login .info { display: none; }
+
+  @media (prefers-reduced-motion: reduce) { .record { animation-duration: 12s; } }
+</style>
+</head>
+<body class="art">
+  <div class="bg" id="bg0"></div>
+  <div class="bg" id="bg1"></div>
+
+  <div class="stage">
+    <div class="disc">
+      <div class="record">
+        <div class="label" id="label"></div>
+        <div class="hole"></div>
+      </div>
+      <div class="sheen"></div>
+    </div>
+    <div class="info hidden" id="info">
+      <div class="title" id="title"></div>
+      <div class="artist" id="artist"></div>
+    </div>
+    <button id="connect">Connect Spotify</button>
+  </div>
+
+<script>
+// ---------- CONFIG ----------
+const CONFIG = {
+  CLIENT_ID: 'PASTE_YOUR_SPOTIFY_CLIENT_ID_HERE',
+  VINYL: 'black',      // 'black' | 'white'
+  BACKGROUND: 'art',   // 'art' (blurred album art) | 'dark' | 'light'
+  POLL_MS: 3000
+};
+// ----------------------------
+
+const SCOPES = 'user-read-currently-playing user-read-playback-state';
+const REDIRECT = location.origin + location.pathname;
+const $ = id => document.getElementById(id);
+const LS = {
+  get: k => localStorage.getItem(k),
+  set: (k, v) => localStorage.setItem(k, v),
+  del: k => localStorage.removeItem(k)
+};
+
+document.body.classList.add(CONFIG.BACKGROUND);
+document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
+
+// ---------- Spotify auth (PKCE, no client secret needed) ----------
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function login() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  LS.set('pkce_verifier', verifier);
+  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    client_id: CONFIG.CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge
+  });
+}
+
+async function tokenRequest(params) {
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: CONFIG.CLIENT_ID, ...params })
+  });
+  if (!r.ok) throw Object.assign(new Error('token request failed'), { status: r.status });
+  const d = await r.json();
+  LS.set('access_token', d.access_token);
+  LS.set('expires_at', String(Date.now() + d.expires_in * 1000 - 60000));
+  if (d.refresh_token) LS.set('refresh_token', d.refresh_token);
+}
+
+async function handleRedirect() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('code')) return;
+  try {
+    await tokenRequest({
+      grant_type: 'authorization_code',
+      code: p.get('code'),
+      redirect_uri: REDIRECT,
+      code_verifier: LS.get('pkce_verifier')
+    });
+  } catch (e) { console.error(e); }
+  history.replaceState({}, '', location.pathname);
+}
+
+async function getToken() {
+  if (Date.now() < Number(LS.get('expires_at') || 0)) return LS.get('access_token');
+  const rt = LS.get('refresh_token');
+  if (!rt) return null;
+  try {
+    await tokenRequest({ grant_type: 'refresh_token', refresh_token: rt });
+    return LS.get('access_token');
+  } catch (e) {
+    // Only drop the login if Spotify rejected it; keep it through network blips.
+    if (e.status === 400 || e.status === 401) ['access_token', 'refresh_token', 'expires_at'].forEach(LS.del);
+    return null;
+  }
+}
+
+// ---------- Rendering ----------
+let lastArt = null, layer = 0;
+
+function setArt(url) {
+  if (url === lastArt) return;
+  lastArt = url;
+  const layers = [$('bg0'), $('bg1')];
+  layer ^= 1;
+  layers[layer].style.backgroundImage = url ? `url(${url})` : 'none';
+  layers[layer].classList.add('on');
+  layers[layer ^ 1].classList.remove('on');
+  $('label').style.backgroundImage = url ? `url(${url})` : 'none';
+}
+
+function render(data) {
+  const item = data && data.item;
+  document.body.classList.remove('needs-login');
+  if (!item) {
+    document.body.classList.remove('playing');
+    $('info').classList.add('hidden');
+    return;
+  }
+  const art = (item.album && item.album.images && item.album.images[0] && item.album.images[0].url)
+    || (item.images && item.images[0] && item.images[0].url) || null;
+  const artist = item.artists ? item.artists.map(a => a.name).join(', ')
+    : (item.show && item.show.name) || '';
+  setArt(art);
+  $('title').textContent = item.name;
+  $('artist').textContent = artist;
+  $('info').classList.remove('hidden');
+  document.body.classList.toggle('playing', !!data.is_playing);
+}
+
+// ---------- Polling ----------
+async function poll() {
+  let delay = CONFIG.POLL_MS;
+  try {
+    const token = await getToken();
+    if (!token) {
+      document.body.classList.add('needs-login');
+      document.body.classList.remove('playing');
+    } else {
+      const r = await fetch(
+        'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (r.status === 200) render(await r.json());
+      else if (r.status === 204) render(null);
+      else if (r.status === 401) LS.set('expires_at', '0');
+      else if (r.status === 429) delay = (Number(r.headers.get('Retry-After')) || 10) * 1000;
+    }
+  } catch (e) { /* offline or transient error: try again next tick */ }
+  setTimeout(poll, delay);
+}
+
+$('connect').addEventListener('click', login);
+handleRedirect().then(poll);
+</script>
+</body>
+</html>
