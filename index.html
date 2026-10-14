@@ -42,114 +42,75 @@
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   }
 
-  /* ---------- Weather peeking in from the top ---------- */
-  .wx {
-    position: fixed; top: 0; left: 0; right: 0; height: 22vh; z-index: 5;
-    pointer-events: none; overflow: hidden;
-    -webkit-mask-image: linear-gradient(#000 45%, transparent);
-            mask-image: linear-gradient(#000 45%, transparent);
-    opacity: 0; transition: opacity 2.5s ease;
-    --wxc: 150,150,150;
+  /* ---------- Neon sign (artist name, top center) ---------- */
+  .neon {
+    position: fixed; top: 3.2vh; left: 50%; transform: translateX(-50%); z-index: 5;
+    max-width: 44vw; text-align: center; white-space: nowrap; pointer-events: none;
+    opacity: var(--nopa, 1); transition: opacity 1.6s ease;
   }
-  .wx.on { opacity: 1; }
-  .wx[data-kind="sunny"]       { --wxc: 255,185,70; }
-  .wx[data-kind="partly"]      { --wxc: 255,205,120; }
-  .wx[data-kind="night"]       { --wxc: 110,130,255; }
-  .wx[data-kind="partlynight"] { --wxc: 120,135,220; --cc: #9aa6bd; }
-  .wx[data-kind="cloudy"]      { --wxc: 175,185,200; --cc: #c9d1de; }
-  .wx[data-kind="rain"]        { --wxc: 90,120,175;  --cc: #7f8a9c; }
-  .wx[data-kind="storm"]       { --wxc: 105,85,170;  --cc: #6d6a85; }
-  .wx[data-kind="snow"]        { --wxc: 200,220,245; --cc: #dfe6f1; }
-  .wx[data-kind="fog"]         { --wxc: 200,200,205; }
-  .wx::before { /* soft colour wash fading down from the top edge */
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(var(--wxc), .34), transparent);
+  .neon:not(.has) { display: none; }
+  body:not(.playing) .neon { --nopa: .38; }
+  body.idle .neon, body.needs-login .neon, body.setup .neon { opacity: 0; }
+  .neon.boot { animation: neonboot 1.7s linear 1; }
+  @keyframes neonboot {
+    0% { opacity: 0; } 8% { opacity: .9; } 12% { opacity: .08; } 20% { opacity: .8; }
+    24% { opacity: .15; } 31% { opacity: .1; } 38% { opacity: 1; } 44% { opacity: .45; }
+    52% { opacity: 1; } 100% { opacity: var(--nopa, 1); }
   }
-  .wxart { position: absolute; inset: 0; }
-
-  .sun {
-    position: absolute; left: 50%; top: -9vh; width: 15vh; height: 15vh; margin-left: -7.5vh;
-    border-radius: 50%;
-    background: radial-gradient(circle at 50% 62%, #fff6c8, #ffd25e 45%, #ff9d2e 100%);
-    box-shadow: 0 0 6vh 2vh rgba(255,190,70,.6), 0 0 16vh 6vh rgba(255,150,40,.3);
-    animation: sunpulse 6s ease-in-out infinite;
+  .neontext {
+    display: inline-block; padding-left: .32em;
+    font-size: var(--nsz, 2.2vw); font-weight: 300; letter-spacing: .32em; text-transform: uppercase;
+    color: color-mix(in srgb, #fff 78%, rgb(var(--glow)));
+    text-shadow: 0 0 .4vh rgba(255,255,255,.55), 0 0 1.2vh rgba(var(--glow), .95),
+      0 0 3vh rgba(var(--glow), .8), 0 0 7vh rgba(var(--glow), .55);
+    animation: neonhum 9s linear infinite;
   }
-  @keyframes sunpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-  .sunrays {
-    position: absolute; left: 50%; top: -23.5vh; width: 44vh; height: 44vh; margin-left: -22vh;
-    border-radius: 50%;
-    background: repeating-conic-gradient(rgba(255,214,120,.4) 0 3deg, transparent 3deg 12deg);
-    -webkit-mask-image: radial-gradient(circle closest-side, #000 25%, transparent 72%);
-            mask-image: radial-gradient(circle closest-side, #000 25%, transparent 72%);
-    animation: wxspin 90s linear infinite;
+  .neontext::after { /* glowing underline tube */
+    content: ""; display: block; width: 60%; height: 2px; margin: 1.1vh auto 0; border-radius: 2px;
+    background: color-mix(in srgb, #fff 60%, rgb(var(--glow)));
+    box-shadow: 0 0 1vh rgba(var(--glow), .95), 0 0 3vh rgba(var(--glow), .7);
   }
-  @keyframes wxspin { to { transform: rotate(360deg); } }
-
-  .moon {
-    position: absolute; left: 50%; top: -3.5vh; width: 9vh; height: 9vh; margin-left: -4.5vh;
-    border-radius: 50%;
-    box-shadow: inset -2.4vh .5vh 0 0 #f3efe0, 0 0 6vh rgba(210,225,255,.35);
-  }
-  .star {
-    position: absolute; border-radius: 50%; background: #fff;
-    animation: twinkle var(--t, 4s) ease-in-out infinite; animation-delay: var(--d, 0s);
-  }
-  @keyframes twinkle { 0%, 100% { opacity: .12; } 50% { opacity: .9; } }
-
-  .cloud {
-    position: absolute; left: 0; font-size: calc(1vh * var(--s, 1));
-    width: 22em; height: 7em; border-radius: 7em;
-    background: var(--cc, #eef2f8); opacity: var(--co, .6);
-    animation: cdrift var(--dur, 150s) linear infinite; animation-delay: var(--dl, 0s);
-  }
-  .cloud::before, .cloud::after { content: ""; position: absolute; border-radius: 50%; background: inherit; }
-  .cloud::before { width: 10em; height: 10em; left: 3em; top: -4.5em; }
-  .cloud::after  { width: 13em; height: 13em; left: 8em; top: -7em; }
-  @keyframes cdrift { from { transform: translateX(-30vw); } to { transform: translateX(125vw); } }
-
-  .drop {
-    position: absolute; top: -3vh; width: 1.5px; height: 2.4vh;
-    background: linear-gradient(transparent, rgba(190,215,255,.75));
-    animation: fall var(--dur, 1s) linear infinite; animation-delay: var(--dl, 0s);
-  }
-  @keyframes fall {
-    from { transform: translate(0, 0) rotate(10deg); }
-    to   { transform: translate(-4vh, 25vh) rotate(10deg); }
-  }
-  .flake {
-    position: absolute; top: -3vh; border-radius: 50%; background: rgba(255,255,255,.88);
-    animation: snowfall var(--dur, 8s) linear infinite; animation-delay: var(--dl, 0s);
-  }
-  @keyframes snowfall {
-    from { transform: translate(0, 0); }
-    50%  { transform: translate(2.2vh, 11vh); }
-    to   { transform: translate(-1vh, 24vh); }
-  }
-  .fogband {
-    position: absolute; left: -20vw; width: 140vw; height: 4.5vh;
-    background: linear-gradient(90deg, transparent, rgba(220,225,230,.38), transparent);
-    animation: fogdrift var(--dur, 40s) ease-in-out infinite alternate; animation-delay: var(--dl, 0s);
-  }
-  @keyframes fogdrift { from { transform: translateX(-8vw); } to { transform: translateX(8vw); } }
-  .flash {
-    position: absolute; inset: 0; opacity: 0;
-    background: radial-gradient(ellipse at 50% 0, rgba(225,215,255,.6), transparent 62%);
-    animation: flash 9s infinite;
-  }
-  @keyframes flash {
-    0%, 6%, 11%, 100% { opacity: 0; }
-    7% { opacity: .9; } 8% { opacity: .1; } 9% { opacity: .7; }
-    55% { opacity: 0; } 56% { opacity: .6; } 57.5% { opacity: 0; }
+  @keyframes neonhum {
+    0%, 100% { opacity: 1; } 41% { opacity: 1; } 42% { opacity: .78; } 43% { opacity: 1; }
+    44% { opacity: .6; } 45.5% { opacity: 1; } 80% { opacity: 1; } 80.6% { opacity: .85; } 81.2% { opacity: 1; }
   }
 
-  .wxtext {
-    position: absolute; top: 2.4vh; left: calc(50% + 11vh); z-index: 2;
-    display: flex; align-items: baseline; gap: 1.1vw; white-space: nowrap;
-    opacity: 0; transition: opacity 2s ease;
+  /* ---------- Queue shelf (next songs peeking over the top edge, right) ---------- */
+  .shelf {
+    position: fixed; top: 0; right: 3vw; z-index: 5; pointer-events: none;
+    display: flex; flex-direction: column; align-items: flex-end;
+    opacity: 0; transition: opacity .8s ease;
   }
-  .wx.on .wxtext { opacity: 1; }
-  .wxtemp { font-size: clamp(20px, 2.2vw, 44px); font-weight: 300; letter-spacing: -.02em; }
-  .wxcond { font-size: clamp(10px, .8vw, 15px); font-weight: 600; letter-spacing: .26em; text-transform: uppercase; opacity: .6; }
+  .shelf.has { opacity: 1; }
+  body.idle .shelf, body.needs-login .shelf, body.setup .shelf { opacity: 0; }
+  .qrow { display: flex; align-items: flex-start; gap: 1.1vw; }
+  .qitem {
+    --sz: 10vh; --rot: 0deg; --qo: 1;
+    width: var(--sz); height: var(--sz); margin-top: calc(var(--sz) * -.34);
+    border-radius: 1vh; background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 1vh 2.6vh rgba(0,0,0,.55);
+    opacity: 0; transform: translateY(-120%) rotate(var(--rot));
+    animation: qdrop .9s cubic-bezier(.2, .9, .2, 1) forwards; animation-delay: calc(var(--i) * .12s);
+  }
+  @keyframes qdrop { to { opacity: var(--qo); transform: translateY(0) rotate(var(--rot)); } }
+  .qitem:nth-child(1) { --sz: 11vh; --rot: -2deg; --qo: 1; box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 1vh 2.6vh rgba(0,0,0,.55), 0 0 3.4vh rgba(var(--glow), .5); }
+  .qitem:nth-child(2) { --sz: 9vh;   --rot: 1.5deg; --qo: .85; }
+  .qitem:nth-child(3) { --sz: 7.5vh; --rot: -1deg;  --qo: .7; }
+  .qitem:nth-child(4) { --sz: 6.2vh; --rot: 2deg;   --qo: .55; }
+  .shelf.soon .qitem:nth-child(1) { animation: qdrop .9s cubic-bezier(.2, .9, .2, 1) forwards, qsoon 1.8s ease-in-out infinite; }
+  @keyframes qsoon {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 1vh 2.6vh rgba(0,0,0,.55), 0 0 3.4vh rgba(var(--glow), .5); }
+    50%      { box-shadow: 0 0 0 1px rgba(var(--glow), .6), 0 1vh 2.6vh rgba(0,0,0,.55), 0 0 6.5vh rgba(var(--glow), .9); }
+  }
+  .qinfo { margin-top: 1.3vh; text-align: right; max-width: 22vw; }
+  .qlabel {
+    font-size: clamp(9px, .75vw, 14px); font-weight: 600; letter-spacing: .26em;
+    text-transform: uppercase; opacity: .55; white-space: nowrap;
+  }
+  .qlabel span { letter-spacing: .12em; font-variant-numeric: tabular-nums; opacity: .8; }
+  .qtitle, .qartist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qtitle { margin-top: .5vh; font-size: clamp(14px, 1.2vw, 23px); font-weight: 600; letter-spacing: -.012em; }
+  .qartist { margin-top: .2vh; font-size: clamp(11px, .95vw, 18px); opacity: .55; }
 
   /* ---------- Idle animation ---------- */
   #idleCanvas {
@@ -355,59 +316,6 @@
     font-variant-numeric: tabular-nums; letter-spacing: .06em;
   }
 
-  /* ---------- Up next (bottom-right corner) ---------- */
-  .next {
-    position: fixed; right: 3vw; bottom: 3vh; z-index: 5;
-    width: clamp(270px, 24vw, 470px);
-    display: flex; align-items: center; gap: 1.3vw;
-    padding: 1.2vh 1.8vh 1.7vh 1.2vh; border-radius: 1.8vh; overflow: hidden;
-    background: linear-gradient(135deg, rgba(var(--glow), .2), rgba(14,12,11,.62) 62%);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 1.4vh 4vh rgba(0,0,0,.45),
-      0 0 5vh rgba(var(--glow), .18);
-    opacity: 0; transform: translateX(2vw) scale(.97);
-    transition: opacity .7s ease, transform .7s cubic-bezier(.2, .8, .2, 1);
-    pointer-events: none;
-  }
-  .next.has { opacity: 1; transform: none; }
-  .next.soon { animation: soonpulse 1.8s ease-in-out infinite; }
-  @keyframes soonpulse {
-    0%, 100% { box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 1.4vh 4vh rgba(0,0,0,.45), 0 0 5vh rgba(var(--glow), .18); }
-    50%      { box-shadow: inset 0 0 0 1px rgba(var(--glow), .5), 0 1.4vh 4vh rgba(0,0,0,.45), 0 0 7vh rgba(var(--glow), .55); }
-  }
-  body.idle .next { opacity: 0; }
-  body.needs-login .next, body.setup .next { display: none; }
-  .nextcover { position: relative; flex: none; width: 9.2vh; height: 7vh; }
-  .nextdisc {
-    position: absolute; left: 3.2vh; top: .5vh; width: 6vh; height: 6vh; border-radius: 50%;
-    background:
-      radial-gradient(circle closest-side, rgb(var(--glow)) 0 22%, #111 23% 27%, transparent 28%),
-      repeating-radial-gradient(circle closest-side, rgba(255,255,255,.06) 0 1px, transparent 1px 3px),
-      #0c0b0a;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.08);
-    animation: spin 6s linear infinite; animation-play-state: paused;
-  }
-  body.playing .nextdisc { animation-play-state: running; }
-  .nextart {
-    position: absolute; left: 0; top: 0; width: 7vh; height: 7vh; border-radius: 1vh;
-    background: #3a322c center / cover no-repeat;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 .6vh 1.6vh rgba(0,0,0,.5);
-  }
-  .nexttext { min-width: 0; flex: 1; }
-  .nextlabel {
-    font-size: clamp(9px, .75vw, 14px); font-weight: 600; letter-spacing: .26em;
-    text-transform: uppercase; opacity: .55; white-space: nowrap;
-  }
-  .nextlabel span { letter-spacing: .12em; font-variant-numeric: tabular-nums; opacity: .8; }
-  .nexttitle, .nextartist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .nexttitle { margin-top: .5vh; font-size: clamp(14px, 1.2vw, 23px); font-weight: 600; letter-spacing: -.012em; }
-  .nextartist { margin-top: .2vh; font-size: clamp(11px, .95vw, 18px); opacity: .55; }
-  .nextbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.08); }
-  .nextbar i {
-    display: block; height: 100%; background: rgb(var(--glow));
-    box-shadow: 0 0 1vh rgba(var(--glow), .9);
-    transform-origin: left; transform: scaleX(0); transition: transform 1s linear;
-  }
-
   /* Login + setup states */
   #connect {
     display: none; font: inherit; font-size: 18px; font-weight: 500;
@@ -428,8 +336,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .record { animation-duration: 12s; }
-    .tilt, .floor, .glow, .idlecenter, .idleart, .eq i, .nextdisc, .next.soon { animation: none; }
-    .sun, .sunrays, .star, .cloud, .drop, .flake, .fogband, .flash { animation: none; }
+    .tilt, .floor, .glow, .idlecenter, .idleart, .eq i, .neontext, .neon.boot { animation: none; }
+    .qitem { animation: none; opacity: var(--qo); transform: rotate(var(--rot)); }
   }
 </style>
 </head>
@@ -444,9 +352,15 @@
     <div class="idletrack" id="idleTrack"></div>
   </div>
 
-  <div class="wx" id="wx">
-    <div class="wxart" id="wxArt"></div>
-    <div class="wxtext"><span class="wxtemp" id="wxTemp"></span><span class="wxcond" id="wxCond"></span></div>
+  <div class="neon" id="neon"><div class="neontext" id="neonText"></div></div>
+
+  <div class="shelf" id="shelf">
+    <div class="qrow" id="qRow"></div>
+    <div class="qinfo">
+      <div class="qlabel">Up next <span id="nextIn"></span></div>
+      <div class="qtitle" id="qTitle"></div>
+      <div class="qartist" id="qArtist"></div>
+    </div>
   </div>
 
   <div class="stage">
@@ -492,19 +406,6 @@
     </div>
   </div>
 
-  <div class="next" id="next">
-    <div class="nextcover">
-      <div class="nextdisc"></div>
-      <div class="nextart" id="nextArt"></div>
-    </div>
-    <div class="nexttext">
-      <div class="nextlabel">Up next <span id="nextIn"></span></div>
-      <div class="nexttitle" id="nextTitle"></div>
-      <div class="nextartist" id="nextArtist"></div>
-    </div>
-    <div class="nextbar"><i id="nextBar"></i></div>
-  </div>
-
   <div class="grain"></div>
 
 <script>
@@ -526,9 +427,6 @@ const CONFIG = {
 };
 // ----------------------------
 
-// Weather location (change LAT/LON for somewhere else). Add SHOW_WEATHER: false to CONFIG to turn it off.
-const WEATHER = { LAT: 40.4259, LON: -86.9081, UNITS: 'fahrenheit' }; // 'fahrenheit' | 'celsius'
-
 const SCOPES = 'user-read-currently-playing user-read-playback-state';
 const REDIRECT = location.origin + location.pathname;
 const $ = id => document.getElementById(id);
@@ -543,8 +441,8 @@ document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
-if (CONFIG.SHOW_NEXT === false) $('next').style.display = 'none'; // "Up next" is on unless you add SHOW_NEXT: false
-if (CONFIG.SHOW_WEATHER === false) $('wx').style.display = 'none'; // weather is on unless you add SHOW_WEATHER: false
+if (CONFIG.SHOW_NEXT === false) $('shelf').style.display = 'none'; // queue shelf is on unless you add SHOW_NEXT: false
+if (CONFIG.SHOW_NEON === false) $('neon').style.display = 'none'; // neon sign is on unless you add SHOW_NEON: false
 
 // ---------- Censoring ----------
 const CONTAINS = ['nigga', 'nigger'];
@@ -554,85 +452,18 @@ const censorRe = new RegExp(
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
 const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
 
-// ---------- Weather (Open-Meteo, no key needed) ----------
-const WX_LABEL = {
-  sunny: 'Sunny', night: 'Clear', partly: 'Partly cloudy', partlynight: 'Partly cloudy',
-  cloudy: 'Cloudy', fog: 'Fog', rain: 'Rain', storm: 'Thunderstorm', snow: 'Snow'
-};
-function wxKind(code, day) {
-  if (code <= 1) return day ? 'sunny' : 'night';
-  if (code === 2) return day ? 'partly' : 'partlynight';
-  if (code === 3) return 'cloudy';
-  if (code === 45 || code === 48) return 'fog';
-  if (code >= 51 && code <= 67) return 'rain';
-  if (code >= 71 && code <= 77) return 'snow';
-  if (code >= 80 && code <= 82) return 'rain';
-  if (code === 85 || code === 86) return 'snow';
-  if (code >= 95) return 'storm';
-  return 'cloudy';
+// ---------- Neon sign ----------
+let neonName = '';
+function setNeon(raw) {
+  const name = censor(raw || '');
+  if (!name || name === neonName) return;
+  neonName = name;
+  const n = $('neon');
+  $('neonText').textContent = name;
+  n.style.setProperty('--nsz', Math.max(1.1, Math.min(2.6, 30 / name.length)) + 'vw'); // long names shrink to fit
+  n.classList.add('has');
+  n.classList.remove('boot'); void n.offsetWidth; n.classList.add('boot'); // flicker on
 }
-const rnd = (a, b) => a + Math.random() * (b - a);
-
-function buildWx(kind) {
-  let h = '';
-  const sun = kind === 'sunny' || kind === 'partly';
-  const moon = kind === 'night' || kind === 'partlynight';
-  if (sun) h += '<div class="sunrays"></div><div class="sun"></div>';
-  if (moon) {
-    h += '<div class="moon"></div>';
-    for (let i = 0; i < 18; i++) {
-      const s = rnd(1.5, 3);
-      h += `<i class="star" style="left:${rnd(2, 98)}%;top:${rnd(1, 15)}vh;width:${s}px;height:${s}px;--t:${rnd(3, 6)}s;--d:-${rnd(0, 6)}s"></i>`;
-    }
-  }
-  const n = { partly: 3, partlynight: 3, cloudy: 6, rain: 6, storm: 6, snow: 5, fog: 2 }[kind] || 0;
-  const co = { partly: [.5, .8], partlynight: [.45, .7], cloudy: [.6, .85], rain: [.7, .9], storm: [.75, .95], snow: [.55, .8], fog: [.3, .5] }[kind] || [.6, .8];
-  for (let i = 0; i < n; i++) {
-    h += `<div class="cloud" style="--s:${rnd(.8, 1.5).toFixed(2)};top:${rnd(-3, 3).toFixed(1)}vh;--co:${rnd(co[0], co[1]).toFixed(2)};--dur:${rnd(110, 200).toFixed(0)}s;--dl:-${rnd(0, 200).toFixed(0)}s"></div>`;
-  }
-  const drops = kind === 'rain' ? 46 : kind === 'storm' ? 62 : 0;
-  for (let i = 0; i < drops; i++) {
-    h += `<i class="drop" style="left:${rnd(0, 100).toFixed(1)}%;--dur:${rnd(.7, 1.2).toFixed(2)}s;--dl:-${rnd(0, 1.2).toFixed(2)}s"></i>`;
-  }
-  if (kind === 'storm') h += '<div class="flash"></div>';
-  if (kind === 'snow') {
-    for (let i = 0; i < 40; i++) {
-      const s = rnd(3, 6).toFixed(1);
-      h += `<i class="flake" style="left:${rnd(0, 100).toFixed(1)}%;width:${s}px;height:${s}px;--dur:${rnd(7, 12).toFixed(1)}s;--dl:-${rnd(0, 12).toFixed(1)}s"></i>`;
-    }
-  }
-  if (kind === 'fog') {
-    for (let i = 0; i < 3; i++) {
-      h += `<div class="fogband" style="top:${i * 3.4}vh;--dur:${rnd(30, 50).toFixed(0)}s;--dl:-${rnd(0, 30).toFixed(0)}s"></div>`;
-    }
-  }
-  $('wxArt').innerHTML = h;
-}
-
-let wxCurrent = '';
-function applyWx(kind, temp) {
-  const wx = $('wx');
-  if (kind !== wxCurrent) { wxCurrent = kind; wx.dataset.kind = kind; buildWx(kind); }
-  $('wxTemp').textContent = temp + '\u00B0';
-  $('wxCond').textContent = WX_LABEL[kind] || '';
-  wx.classList.add('on');
-}
-
-async function loadWeather() {
-  if (CONFIG.SHOW_WEATHER === false) return;
-  const forced = new URLSearchParams(location.search).get('wx'); // preview: ?wx=rain (sunny, night, partly, cloudy, rain, storm, snow, fog)
-  if (forced && WX_LABEL[forced]) { applyWx(forced, 72); return; }
-  try {
-    const u = 'https://api.open-meteo.com/v1/forecast?latitude=' + WEATHER.LAT + '&longitude=' + WEATHER.LON +
-      '&current=temperature_2m,weather_code,is_day&temperature_unit=' + WEATHER.UNITS + '&timezone=auto';
-    const r = await fetch(u);
-    if (!r.ok) return;
-    const c = (await r.json()).current;
-    if (c) applyWx(wxKind(c.weather_code, c.is_day === 1), Math.round(c.temperature_2m));
-  } catch (e) { /* offline: keep what's showing */ }
-}
-loadWeather();
-setInterval(loadWeather, 10 * 60 * 1000);
 
 // ---------- Idle animation (canvas) ----------
 const cv = $('idleCanvas');
@@ -987,25 +818,28 @@ function lyricTick() {
 setInterval(lyricTick, 250);
 window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
-// ---------- Up next (Spotify queue) ----------
-let nextKey = '';
-function showNext(n) {
-  const el = $('next');
-  const key = n ? String(n.id) : '';
-  if (key === nextKey) return;
-  nextKey = key;
-  el.classList.remove('has', 'soon');
-  if (!n) return;
-  setTimeout(() => { // let the old card fade out before swapping content
-    if (nextKey !== key) return;
-    const imgs = (n.album && n.album.images) || n.images || [];
-    const thumb = (imgs[1] || imgs[0] || {}).url;
+// ---------- Queue shelf (next songs from the Spotify queue) ----------
+let shelfKey = '';
+function showNext(list) {
+  const sh = $('shelf');
+  const key = list.map(n => n.id).join(',');
+  if (key === shelfKey) return;
+  shelfKey = key;
+  sh.classList.remove('has', 'soon');
+  if (!list.length) return;
+  setTimeout(() => { // let the old shelf fade out before swapping content
+    if (shelfKey !== key) return;
+    $('qRow').innerHTML = list.map((n, i) => {
+      const imgs = (n.album && n.album.images) || n.images || [];
+      const thumb = (imgs[1] || imgs[0] || {}).url;
+      return `<div class="qitem" style="--i:${i};background-image:${thumb ? `url('${thumb}')` : 'none'}"></div>`;
+    }).join('');
+    const n = list[0];
     const who = n.artists ? n.artists.map(a => a.name).join(', ') : (n.show && n.show.publisher) || '';
-    $('nextTitle').textContent = censor(n.name);
-    $('nextArtist').textContent = censor(who);
-    $('nextArt').style.backgroundImage = thumb ? `url(${thumb})` : 'none';
-    el.classList.add('has');
-    tick(); // sync the countdown and bar right away
+    $('qTitle').textContent = censor(n.name);
+    $('qArtist').textContent = censor(who);
+    sh.classList.add('has');
+    tick(); // sync the countdown right away
   }, 450);
 }
 
@@ -1018,7 +852,7 @@ async function fetchNext() {
       { headers: { Authorization: 'Bearer ' + token } });
     if (!r.ok) return; // rate limited or unavailable: keep what's showing
     const d = await r.json();
-    showNext(d.queue && d.queue.length ? d.queue[0] : null);
+    showNext((d.queue || []).slice(0, 4));
   } catch (e) { /* offline: try again later */ }
 }
 setInterval(() => { if (cur.playing) fetchNext(); }, 30000);
@@ -1070,8 +904,12 @@ function render(data) {
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
+  const mainArtist = item.artists && item.artists[0] ? item.artists[0].name
+    : (item.show && (item.show.publisher || item.show.name)) || '';
   const albumName = item.album ? item.album.name : (item.show ? item.show.name : '');
   const year = item.album && item.album.release_date ? item.album.release_date.slice(0, 4) : '';
+
+  setNeon(mainArtist);
 
   // Keep the last track under the idle animation after pause/stop
   if (CONFIG.IDLE_TRACK) {
@@ -1133,13 +971,12 @@ function tick() {
   $('tNow').textContent = fmtTime(Math.min(p, cur.duration));
   $('tTot').textContent = fmtTime(cur.duration);
 
-  // Up next: countdown to the end of the current song, progress bar, and a pulse in the last 15s
-  const nx = $('next');
-  if (nx.classList.contains('has')) {
+  // Queue shelf: countdown to the end of the current song, and a pulse in the last 15s
+  const sh = $('shelf');
+  if (sh.classList.contains('has')) {
     const rem = Math.max(0, cur.duration - p);
     $('nextIn').textContent = cur.playing ? '\u00B7 in ' + fmtTime(rem) : '';
-    $('nextBar').style.transform = `scaleX(${Math.min(1, p / cur.duration)})`;
-    nx.classList.toggle('soon', cur.playing && rem < 15000);
+    sh.classList.toggle('soon', cur.playing && rem < 15000);
   }
 }
 setInterval(tick, 1000);
