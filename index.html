@@ -6,13 +6,13 @@
 <title>Vinyl Wallpaper</title>
 <style>
   :root {
-    --s: min(88vh, 46vw);   /* sleeve size: the whole composition scales from this */
-    --h: 76vh;              /* height of the lyrics column */
+    --r: min(68vh, 38vw);      /* record size: everything scales from this */
     --ink: #efe9de;
+    --glow: 140,120,110;       /* overwritten from the album art */
   }
   * { box-sizing: border-box; margin: 0; }
-html, body {
-  position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden;
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
     background: #0b0a09; color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -20,19 +20,17 @@ html, body {
   body.light { background: #e9e4d9; --ink: #1b1814; }
   body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
   body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
-.bg {
-  /* blur a small copy, then scale it up: avoids WebKit clipping huge filtered layers */
-  position: fixed; left: -14vw; top: -14vh; width: 38vw; height: 38vh;
-  transform: scale(4); transform-origin: 0 0;
-  background-size: cover; background-position: center;
-  filter: blur(22px) saturate(1.2) brightness(.42);
-  opacity: 0; transition: opacity 1.4s ease;
-}
-.bg.on { opacity: 1; }
+
+  /* Background: colored gradients from the album art (no blur filters) */
+  .bg {
+    position: fixed; inset: 0;
+    opacity: 0; transition: opacity 1.4s ease;
+  }
+  .bg.on { opacity: 1; }
   body.dark .bg, body.light .bg { display: none; }
   .vignette {
     position: fixed; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 30% 50%, transparent 25%, rgba(0,0,0,.6) 100%);
+    background: radial-gradient(ellipse at 35% 50%, transparent 30%, rgba(0,0,0,.55) 100%);
   }
   body.light .vignette { display: none; }
 
@@ -56,44 +54,63 @@ html, body {
   body.idle .clock { opacity: 0; }
 
   .stage {
-    position: relative; z-index: 1; height: 100%;
-    display: flex; align-items: center; justify-content: center;
+    position: relative; z-index: 1; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 7vw;
     transition: opacity 1.2s ease;
   }
   body.idle .stage { opacity: 0; }
 
-  /* ---------- Sleeve + record (bleeds off the left edge) ---------- */
-  .art {
-    position: absolute; top: 50%; left: calc(var(--s) * -.05);
-    width: calc(var(--s) * 1.4); height: var(--s);
-    transform: translateY(-50%);
+  /* ---------- Floating record ---------- */
+  .scene { position: relative; flex: none; width: var(--r); height: var(--r); perspective: 1400px; }
+
+  .glow {
+    position: absolute; inset: -38%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle closest-side,
+      rgba(var(--glow), .55), rgba(var(--glow), .22) 55%, transparent 100%);
+    opacity: .7;
   }
-  .sleeve {
-    position: absolute; left: 0; top: 0; z-index: 2;
-    width: var(--s); height: var(--s);
-    border-radius: calc(var(--s) * .008);
-    background: #2a2622 center / cover no-repeat;
-    box-shadow: 0 2vh 7vh rgba(0,0,0,.65), 0 0 0 1px rgba(0,0,0,.35),
-      inset 0 0 0 1px rgba(255,255,255,.07);
-    transition: background-image .6s;
-  }
-  .sleeve::after { /* soft gloss + edge shading */
-    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background:
-      linear-gradient(115deg, rgba(255,255,255,.14), transparent 38%, rgba(0,0,0,.18) 100%),
-      linear-gradient(90deg, rgba(0,0,0,.28), transparent 3%, transparent 97%, rgba(0,0,0,.22));
+  body.playing .glow { animation: pulse 5s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: .6; transform: scale(1); }
+    50%      { opacity: .95; transform: scale(1.06); }
   }
 
-  /* The record slides out of the sleeve while playing, tucks back in when paused */
-  .slide {
-    position: absolute; z-index: 1;
-    left: calc(var(--s) * .38); top: calc(var(--s) * .02);
-    width: calc(var(--s) * .96); height: calc(var(--s) * .96);
-    transform: translateX(calc(var(--s) * -.22));
-    transition: transform 1.8s cubic-bezier(.45, .05, .25, 1);
+  .floor { /* soft shadow under the hovering record */
+    position: absolute; left: 12%; right: 12%; bottom: -10%; height: 7%; pointer-events: none;
+    background: radial-gradient(ellipse closest-side, rgba(0,0,0,.55), transparent);
+    animation: floorbob 7s ease-in-out infinite;
   }
-  body.playing .slide { transform: translateX(0); }
+  @keyframes floorbob {
+    0%, 100% { transform: scale(1); opacity: .9; }
+    50%      { transform: scale(.88); opacity: .6; }
+  }
 
+  .tilt {
+    position: absolute; inset: 0;
+    transform: rotateX(16deg) rotateY(-12deg);
+    animation: float 7s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: rotateX(16deg) rotateY(-12deg) translateY(0); }
+    50%      { transform: rotateX(16deg) rotateY(-12deg) translateY(-1.6vh); }
+  }
+
+  /* Thin progress ring around the record */
+  .ring {
+    position: absolute; inset: -6%; width: 112%; height: 112%;
+    overflow: visible; transform: rotate(-90deg);
+  }
+  .ring circle { fill: none; }
+  .ring .track { stroke: rgba(255,255,255,.14); stroke-width: .3; }
+  body.light .ring .track { stroke: rgba(0,0,0,.15); }
+  #ringFill {
+    stroke: var(--ink); stroke-width: .45; stroke-opacity: .9;
+    stroke-dasharray: 1 2; stroke-dashoffset: 1;
+    transition: stroke-dashoffset 1s linear;
+    filter: drop-shadow(0 0 .5vh rgba(var(--glow), .9));
+  }
+
+  .disc { position: absolute; inset: 0; }
   .record {
     position: absolute; inset: 0; border-radius: 50%;
     background:
@@ -105,7 +122,8 @@ html, body {
         var(--gap) 88% 88.5%, transparent 88.5%),
       repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
       var(--v);
-    box-shadow: inset 0 0 0 calc(var(--s) * .004) var(--lip), 0 .6vh 2.4vh rgba(0,0,0,.55);
+    box-shadow: inset 0 0 0 calc(var(--r) * .004) var(--lip),
+      0 .8vh 3vh rgba(0,0,0,.55), 0 0 6vh rgba(var(--glow), .3);
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
@@ -123,8 +141,8 @@ html, body {
   .sheen {
     position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
     background: conic-gradient(from 30deg,
-      transparent 0 4%, rgba(255,255,255,.13) 10%, transparent 18% 54%,
-      rgba(255,255,255,.08) 60%, transparent 68%);
+      transparent 0 4%, rgba(255,255,255,.14) 10%, transparent 18% 54%,
+      rgba(255,255,255,.09) 60%, transparent 68%);
     mix-blend-mode: screen;
     -webkit-mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
             mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
@@ -132,10 +150,7 @@ html, body {
 
   /* ---------- Right column ---------- */
   .side {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    left: calc(var(--s) * 1.15 + 3vw);   /* starts just past the record */
-    right: 4vw;
-    height: min(var(--h), 90vh);
+    flex: none; width: 32vw; height: var(--r);
     display: flex; flex-direction: column; justify-content: space-between;
   }
   .lyrics {
@@ -155,13 +170,10 @@ html, body {
   .ll.near { opacity: .38; }
   .ll.on { opacity: 1; transform: scale(1); }
 
-  .info { margin-bottom: 1vh; transition: opacity .5s ease; }
+  .info { margin-top: 2vh; transition: opacity .5s ease; }
   .info.hidden { opacity: 0; }
   .title { font-size: clamp(16px, 1.7vw, 32px); font-weight: 500; line-height: 1.15; letter-spacing: -.015em; }
   .artist { margin-top: .8vh; font-size: clamp(12px, 1.1vw, 20px); opacity: .55; }
-  .bar { margin-top: 3vh; height: 1px; background: color-mix(in srgb, var(--ink) 18%, transparent); }
-  .bar i { display: block; height: 100%; background: var(--ink); opacity: .8;
-    transform-origin: left; transform: scaleX(0); transition: transform 1s linear; }
 
   /* Login + setup states */
   #connect {
@@ -170,7 +182,7 @@ html, body {
     background: var(--ink); color: #0b0a09; cursor: pointer;
   }
   body.needs-login #connect { display: block; }
-  body.needs-login .side, body.setup .side, body.needs-login .art, body.setup .art { display: none; }
+  body.needs-login .side, body.setup .side, body.needs-login .scene, body.setup .scene { display: none; }
   body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
   body.needs-login #connect { cursor: pointer; }
 
@@ -181,7 +193,10 @@ html, body {
     font: 13px ui-monospace, Menlo, monospace; color: #111; background: #fff; border: 0;
   }
 
-  @media (prefers-reduced-motion: reduce) { .record { animation-duration: 12s; } }
+  @media (prefers-reduced-motion: reduce) {
+    .record { animation-duration: 12s; }
+    .tilt, .floor, body.playing .glow { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -192,15 +207,22 @@ html, body {
   <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
 
   <div class="stage">
-    <div class="art">
-      <div class="slide">
-        <div class="record">
-          <div class="label" id="label"></div>
-          <div class="hole"></div>
+    <div class="scene">
+      <div class="glow"></div>
+      <div class="floor"></div>
+      <div class="tilt">
+        <svg class="ring" id="ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="track" cx="50" cy="50" r="48"></circle>
+          <circle id="ringFill" cx="50" cy="50" r="48" pathLength="1"></circle>
+        </svg>
+        <div class="disc">
+          <div class="record">
+            <div class="label" id="label"></div>
+            <div class="hole"></div>
+          </div>
+          <div class="sheen"></div>
         </div>
-        <div class="sheen"></div>
       </div>
-      <div class="sleeve" id="sleeve"></div>
     </div>
 
     <div class="side">
@@ -208,7 +230,6 @@ html, body {
       <div class="info hidden" id="info">
         <div class="title" id="title"></div>
         <div class="artist" id="artist"></div>
-        <div class="bar"><i id="fill"></i></div>
       </div>
     </div>
 
@@ -224,8 +245,8 @@ html, body {
 const CONFIG = {
   CLIENT_ID: '7accde9c16c942b0b671362deca8a31a',
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
-  BACKGROUND: 'art',     // 'art' (blurred album art) | 'dark' | 'light'
-  SHOW_PROGRESS: true,   // thin progress line under the track
+  BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark' | 'light'
+  SHOW_PROGRESS: true,   // thin progress ring around the record
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
   SHOW_CLOCK: false,      // small clock, top left
@@ -248,7 +269,7 @@ const LS = {
 
 document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
-if (!CONFIG.SHOW_PROGRESS) document.querySelector('.bar').style.display = 'none';
+if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 
 // ---------- Censoring ----------
@@ -352,7 +373,7 @@ async function getToken() {
   }
 }
 
-// ---------- Vinyl color from album art ----------
+// ---------- Color from album art (vinyl tint + glow) ----------
 function extractColor(url) {
   return new Promise(resolve => {
     const img = new Image();
@@ -386,6 +407,20 @@ function applyVinyl(rgb) {
   s.setProperty('--groove', 'rgba(255,255,255,.035)');
   s.setProperty('--gap', 'rgba(0,0,0,.5)');
   s.setProperty('--lip', 'rgba(255,255,255,.09)');
+}
+
+// Brighten the average color so the glow is vivid even for dark covers.
+function glowColor(rgb) {
+  if (!rgb) return [140, 120, 110];
+  const m = Math.max(...rgb, 1);
+  const k = Math.min(3.5, 230 / m);
+  return rgb.map(v => Math.min(255, Math.round(v * k)));
+}
+
+function applyGlow(rgb) {
+  const [r, g, b] = glowColor(rgb);
+  document.body.style.setProperty('--glow', `${r},${g},${b}`);
+  return [r, g, b];
 }
 
 // ---------- Lyrics (LRCLIB, synced, scrolling list) ----------
@@ -469,20 +504,32 @@ window.addEventListener('resize', () => focusLine(lyricIdx, true));
 let lastArt = null, layer = 0;
 const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
 
+function setBackground(url, rgb) {
+  const layers = [$('bg0'), $('bg1')];
+  layer ^= 1;
+  if (url && rgb) {
+    const [r, g, b] = rgb;
+    layers[layer].style.background =
+      `radial-gradient(ellipse 65% 85% at 30% 50%, rgba(${r},${g},${b},.42), transparent 70%),` +
+      `radial-gradient(ellipse 70% 60% at 95% 100%, rgba(${r},${g},${b},.18), transparent 70%),` +
+      `#0b0a09`;
+  } else {
+    layers[layer].style.background = '#0b0a09';
+  }
+  layers[layer].classList.add('on');
+  layers[layer ^ 1].classList.remove('on');
+}
+
 function setArt(url) {
   if (url === lastArt) return;
   lastArt = url;
-  const layers = [$('bg0'), $('bg1')];
-  layer ^= 1;
-  layers[layer].style.backgroundImage = url ? `url(${url})` : 'none';
-  layers[layer].classList.add('on');
-  layers[layer ^ 1].classList.remove('on');
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
-  $('sleeve').style.backgroundImage = url ? `url(${url})` : 'none';
-  if (CONFIG.VINYL === 'art') {
-    if (url) extractColor(url).then(c => { if (lastArt === url) applyVinyl(c); });
-    else applyVinyl(null);
-  }
+  (url ? extractColor(url) : Promise.resolve(null)).then(c => {
+    if (lastArt !== url) return;
+    const glow = applyGlow(c);
+    if (CONFIG.VINYL === 'art') applyVinyl(c);
+    setBackground(url, glow);
+  });
 }
 
 function render(data) {
@@ -513,14 +560,14 @@ function render(data) {
 
   if (changed) {
     $('info').classList.add('hidden');
-    $('fill').style.transition = 'none';
+    $('ringFill').style.transition = 'none';
     setTimeout(() => {
       $('title').textContent = censor(item.name);
       $('artist').textContent = censor(artist);
       $('info').classList.remove('hidden');
     }, $('title').textContent ? 350 : 0);
     tick();
-    requestAnimationFrame(() => requestAnimationFrame(() => { $('fill').style.transition = ''; }));
+    requestAnimationFrame(() => requestAnimationFrame(() => { $('ringFill').style.transition = ''; }));
 
     lyrics = []; lyricIdx = -8; buildList();
     if (CONFIG.SHOW_LYRICS && item.type === 'track') {
@@ -535,7 +582,7 @@ function render(data) {
 
 function tick() {
   const p = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
-  $('fill').style.transform = `scaleX(${Math.min(1, p / cur.duration)})`;
+  $('ringFill').style.strokeDashoffset = String(1 - Math.min(1, p / cur.duration));
 }
 setInterval(tick, 1000);
 
