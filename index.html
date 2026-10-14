@@ -5,36 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vinyl Wallpaper</title>
 <style>
-  :root { --size: min(80vh, 56vw); }
+  :root { --size: min(84vh, 58vw); --ink: #efe9de; }
   * { box-sizing: border-box; margin: 0; }
   html, body {
-    height: 100%; overflow: hidden; cursor: none;
-    background: #0d0c0b; color: #f4efe6;
-    font-family: "Avenir Next", "Helvetica Neue", Helvetica, sans-serif;
+    height: 100%; overflow: hidden;
+    background: #0b0a09; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  body.light { background: #ece7dc; color: #1b1814; }
-  body.white-vinyl { --v: #e8e4da; --groove: rgba(0,0,0,.07); --lip: rgba(0,0,0,.18); }
-  body:not(.white-vinyl) { --v: #0f0e0d; --groove: rgba(255,255,255,.045); --lip: rgba(255,255,255,.08); }
+  body.light { background: #e9e4d9; --ink: #1b1814; }
+  body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
+  body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
 
+  /* Background: blurred album art, kept dim so the record is the only bright thing */
   .bg {
-    position: fixed; inset: -12%; background-size: cover; background-position: center;
-    filter: blur(70px) saturate(1.35) brightness(.5);
-    opacity: 0; transition: opacity 1.2s ease;
+    position: fixed; inset: -14%; background-size: cover; background-position: center;
+    filter: blur(90px) saturate(1.2) brightness(.42);
+    opacity: 0; transition: opacity 1.4s ease;
   }
   .bg.on { opacity: 1; }
   body.dark .bg, body.light .bg { display: none; }
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 38% 50%, transparent 25%, rgba(0,0,0,.6) 100%);
+  }
+  body.light .vignette { display: none; }
 
   .stage {
     position: relative; z-index: 1; height: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 6vw;
+    display: flex; align-items: center; justify-content: center; gap: 7vw;
   }
 
+  /* Record */
   .disc { position: relative; width: var(--size); aspect-ratio: 1; flex: none;
-    filter: drop-shadow(0 3vh 6vh rgba(0,0,0,.55)); }
+    filter: drop-shadow(0 4vh 7vh rgba(0,0,0,.6)); }
   .record {
     position: absolute; inset: 0; border-radius: 50%;
-    background: repeating-radial-gradient(circle, var(--groove) 0 1px, transparent 1px 4px), var(--v);
-    box-shadow: inset 0 0 0 .5vmin var(--lip);
+    background:
+      radial-gradient(circle closest-side,
+        transparent 0 38%, var(--gap) 38% 39%, transparent 39% 52%,
+        var(--gap) 52% 52.5%, transparent 52.5% 64%,
+        var(--gap) 64% 64.5%, transparent 64.5% 76%,
+        var(--gap) 76% 76.5%, transparent 76.5% 88%,
+        var(--gap) 88% 88.5%, transparent 88.5%),
+      repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
+      var(--v);
+    box-shadow: inset 0 0 0 .45vmin var(--lip);
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
@@ -43,36 +59,60 @@
 
   .label {
     position: absolute; inset: 32%; border-radius: 50%;
-    background: #6b5d4f center / cover no-repeat;
-    box-shadow: 0 0 0 .4vmin rgba(0,0,0,.35);
+    background: #5b5047 center / cover no-repeat;
+    box-shadow: inset 0 0 0 .3vmin rgba(0,0,0,.3), 0 0 0 .5vmin rgba(0,0,0,.4);
+    transition: background-image .6s;
   }
-  .hole { position: absolute; inset: 48.5%; border-radius: 50%; background: #0d0c0b; }
+  .hole { position: absolute; inset: 48.8%; border-radius: 50%; background: #0b0a09;
+    box-shadow: 0 0 0 .2vmin rgba(255,255,255,.12); }
   .sheen {
     position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
-    background: conic-gradient(from 25deg,
-      transparent 0 6%, rgba(255,255,255,.16) 12%, transparent 20% 56%,
-      rgba(255,255,255,.1) 63%, transparent 70%);
+    background: conic-gradient(from 30deg,
+      transparent 0 4%, rgba(255,255,255,.13) 10%, transparent 18% 54%,
+      rgba(255,255,255,.08) 60%, transparent 68%);
+    mix-blend-mode: screen;
+    -webkit-mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
+            mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
   }
 
-  .info { max-width: 26vw; transition: opacity .6s ease; }
+  /* Track info: quiet, bottom-aligned with the record */
+  .info {
+    width: 22vw; align-self: flex-end; margin-bottom: 5vh;
+    transition: opacity .5s ease;
+  }
   .info.hidden { opacity: 0; }
-  .title { font-size: clamp(22px, 3.2vw, 60px); font-weight: 600; line-height: 1.1; letter-spacing: -.01em; }
-  .artist { margin-top: 1.2vh; font-size: clamp(14px, 1.6vw, 30px); opacity: .7; }
+  .title { font-size: clamp(18px, 2.1vw, 40px); font-weight: 500; line-height: 1.15; letter-spacing: -.015em; }
+  .artist { margin-top: 1vh; font-size: clamp(13px, 1.2vw, 22px); opacity: .55; }
+  .bar { margin-top: 3.5vh; height: 1px; background: color-mix(in srgb, var(--ink) 18%, transparent); }
+  .bar i { display: block; height: 100%; background: var(--ink); opacity: .8;
+    transform-origin: left; transform: scaleX(0); transition: transform 1s linear; }
 
+  /* Login + setup states */
   #connect {
-    display: none; cursor: pointer; font: inherit; font-size: 20px;
-    padding: 14px 28px; border-radius: 999px; border: 0;
-    background: #1db954; color: #04130a; font-weight: 600;
+    display: none; font: inherit; font-size: 18px; font-weight: 500;
+    padding: 12px 26px; border-radius: 999px; border: 0;
+    background: var(--ink); color: #0b0a09; cursor: pointer;
   }
-  body.needs-login #connect { display: block; cursor: pointer; }
+  body.needs-login #connect { display: block; }
   body.needs-login .info { display: none; }
+  body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
+  body.needs-login #connect { cursor: pointer; }
+
+  #transfer { display: none; max-width: 34vw; font-size: 16px; line-height: 1.5; }
+  body.setup #transfer { display: block; }
+  body.setup .info { display: none; }
+  #transfer textarea {
+    width: 100%; height: 150px; margin-top: 10px; padding: 10px; border-radius: 8px;
+    font: 13px ui-monospace, Menlo, monospace; color: #111; background: #fff; border: 0;
+  }
 
   @media (prefers-reduced-motion: reduce) { .record { animation-duration: 12s; } }
 </style>
 </head>
-<body class="art">
+<body>
   <div class="bg" id="bg0"></div>
   <div class="bg" id="bg1"></div>
+  <div class="vignette"></div>
 
   <div class="stage">
     <div class="disc">
@@ -82,11 +122,18 @@
       </div>
       <div class="sheen"></div>
     </div>
+
     <div class="info hidden" id="info">
       <div class="title" id="title"></div>
       <div class="artist" id="artist"></div>
+      <div class="bar"><i id="fill"></i></div>
     </div>
+
     <button id="connect">Connect Spotify</button>
+    <div id="transfer">
+      Connected. Copy this whole link and paste it as the website URL in Plash.
+      <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
+    </div>
   </div>
 
 <script>
@@ -95,6 +142,7 @@ const CONFIG = {
   CLIENT_ID: '7accde9c16c942b0b671362deca8a31a',
   VINYL: 'black',      // 'black' | 'white'
   BACKGROUND: 'art',   // 'art' (blurred album art) | 'dark' | 'light'
+  SHOW_PROGRESS: true, // thin progress line under the track
   POLL_MS: 3000
 };
 // ----------------------------
@@ -110,6 +158,7 @@ const LS = {
 
 document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
+if (!CONFIG.SHOW_PROGRESS) document.querySelector('.bar').style.display = 'none';
 
 // ---------- Spotify auth (PKCE, no client secret needed) ----------
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
@@ -119,6 +168,7 @@ async function login() {
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
   LS.set('pkce_verifier', verifier);
+  LS.set('setup', location.search.includes('setup') ? '1' : '');
   location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
     client_id: CONFIG.CLIENT_ID,
     response_type: 'code',
@@ -154,6 +204,11 @@ async function handleRedirect() {
     });
   } catch (e) { console.error(e); }
   history.replaceState({}, '', location.pathname);
+  if (LS.get('setup') === '1' && LS.get('refresh_token')) {
+    $('transferUrl').value = REDIRECT + '#rt=' + encodeURIComponent(LS.get('refresh_token'));
+    document.body.classList.add('setup');
+  }
+  LS.del('setup');
 }
 
 async function getToken() {
@@ -172,6 +227,7 @@ async function getToken() {
 
 // ---------- Rendering ----------
 let lastArt = null, layer = 0;
+const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
 
 function setArt(url) {
   if (url === lastArt) return;
@@ -184,10 +240,16 @@ function setArt(url) {
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
 }
 
+function setText(title, artist) {
+  $('title').textContent = title;
+  $('artist').textContent = artist;
+}
+
 function render(data) {
   const item = data && data.item;
   document.body.classList.remove('needs-login');
   if (!item) {
+    cur.playing = false;
     document.body.classList.remove('playing');
     $('info').classList.add('hidden');
     return;
@@ -196,12 +258,36 @@ function render(data) {
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
+
+  const changed = item.id !== cur.id;
+  cur.id = item.id;
+  cur.progress = data.progress_ms || 0;
+  cur.duration = item.duration_ms || 1;
+  cur.stamp = performance.now();
+  cur.playing = !!data.is_playing;
+
   setArt(art);
-  $('title').textContent = item.name;
-  $('artist').textContent = artist;
-  $('info').classList.remove('hidden');
-  document.body.classList.toggle('playing', !!data.is_playing);
+  document.body.classList.toggle('playing', cur.playing);
+
+  if (changed) {
+    $('info').classList.add('hidden');
+    $('fill').style.transition = 'none';
+    setTimeout(() => {
+      setText(item.name, artist);
+      $('info').classList.remove('hidden');
+    }, $('title').textContent ? 350 : 0);
+    tick();
+    requestAnimationFrame(() => requestAnimationFrame(() => { $('fill').style.transition = ''; }));
+  } else {
+    $('info').classList.remove('hidden');
+  }
 }
+
+function tick() {
+  const p = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
+  $('fill').style.transform = `scaleX(${Math.min(1, p / cur.duration)})`;
+}
+setInterval(tick, 1000);
 
 // ---------- Polling ----------
 async function poll() {
@@ -223,6 +309,16 @@ async function poll() {
     }
   } catch (e) { /* offline or transient error: try again next tick */ }
   setTimeout(poll, delay);
+}
+
+// Token handed over from a normal browser (see ?setup flow). Only used if this page isn't logged in yet.
+const hashRt = location.hash.match(/rt=([^&]+)/);
+if (hashRt) {
+  if (!LS.get('refresh_token')) {
+    LS.set('refresh_token', decodeURIComponent(hashRt[1]));
+    LS.set('expires_at', '0');
+  }
+  history.replaceState({}, '', location.pathname);
 }
 
 $('connect').addEventListener('click', login);
