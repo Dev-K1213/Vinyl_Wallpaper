@@ -35,6 +35,13 @@
   }
   body.light .vignette { display: none; }
 
+  /* Fine film grain over everything: richer gradients, no banding */
+  .grain {
+    position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: .06;
+    background-size: 220px 220px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
   /* ---------- Idle animation ---------- */
   #idleCanvas {
     position: fixed; inset: 0; z-index: 3; width: 100%; height: 100%;
@@ -201,6 +208,16 @@
     text-shadow: 0 0 3vh rgba(var(--glow), .55);
   }
 
+  /* Shown instead of lyrics when a song has none: album name as big outlined text */
+  .nolyrics {
+    position: absolute; inset: 0; padding: 0 6vh;
+    display: flex; align-items: center;
+    font-size: clamp(38px, 5.4vw, 108px); font-weight: 700; line-height: 1.02; letter-spacing: -.04em;
+    color: transparent; -webkit-text-stroke: 1.5px rgba(var(--glow), .5);
+    overflow: hidden; opacity: 0; transition: opacity 1s ease;
+  }
+  body.nolyrics .nolyrics { opacity: 1; }
+
   .info { margin-top: 2vh; transition: opacity .5s ease; }
   .info.hidden { opacity: 0; }
   .eyebrow {
@@ -224,6 +241,7 @@
     font-size: clamp(24px, 3vw, 58px); font-weight: 600; line-height: 1.08; letter-spacing: -.025em;
   }
   .artist { margin-top: 1vh; font-size: clamp(15px, 1.55vw, 30px); opacity: .6; }
+  .album { margin-top: .7vh; font-size: clamp(12px, 1.1vw, 21px); opacity: .38; }
   .times {
     margin-top: 2vh; font-size: clamp(12px, 1.05vw, 20px); opacity: .45;
     font-variant-numeric: tabular-nums; letter-spacing: .06em;
@@ -284,7 +302,10 @@
     </div>
 
     <div class="side">
-      <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
+      <div class="lyrics" id="lyrics">
+        <div class="lyricList" id="lyricList"></div>
+        <div class="nolyrics" id="noLyrics"></div>
+      </div>
       <div class="info hidden" id="info">
         <div class="eyebrow">
           <div class="eq"><i></i><i></i><i></i><i></i></div>
@@ -292,6 +313,7 @@
         </div>
         <div class="title" id="title"></div>
         <div class="artist" id="artist"></div>
+        <div class="album" id="album"></div>
         <div class="times"><span id="tNow">0:00</span> / <span id="tTot">0:00</span></div>
       </div>
     </div>
@@ -303,6 +325,8 @@
     </div>
   </div>
 
+  <div class="grain"></div>
+
 <script>
 // ---------- CONFIG ----------
 const CONFIG = {
@@ -312,6 +336,7 @@ const CONFIG = {
   SHOW_PROGRESS: true,   // thin progress ring around the record
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
+  GRAIN: true,           // fine film grain over everything
   IDLE_ANIMATION: true,  // generative animation when music is paused or stopped
   IDLE_TRACK: true,      // show the last played track under the animation
   IDLE_SECONDS: 10,      // how long music must be stopped before the animation appears
@@ -334,6 +359,7 @@ document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
+if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
 
 // ---------- Censoring ----------
 const CONTAINS = ['fuck', 'shit'];
@@ -393,6 +419,7 @@ const DOTS = Array.from({ length: 80 }, () => ({
   x: Math.random(), y: Math.random(), s: .5 + Math.random() * 1.6,
   vy: .004 + Math.random() * .014, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.4
 }));
+const BARS = 120;
 let ripples = [], lastSpawn = 0, raf = 0, last = 0, stopTimer = null;
 
 function frame(now) {
@@ -441,6 +468,24 @@ function frame(now) {
       cx.stroke();
     }
   }
+
+  // audio-style bar ring around the center disc (generated, mirrored left/right)
+  cx.lineCap = 'round';
+  cx.lineWidth = Math.max(2, m * .0042);
+  cx.strokeStyle = `rgba(${cA[0]},${cA[1]},${cA[2]},.6)`;
+  cx.beginPath();
+  const r0 = m * .155;
+  for (let i = 0; i < BARS; i++) {
+    const idx = i < BARS / 2 ? i : BARS - 1 - i;
+    const v = (Math.sin(t * 1.6 + idx * .42) + Math.sin(t * 1.05 - idx * .27) + Math.sin(t * .5 + idx * .9)) / 3;
+    const n = (v + 1) / 2;
+    const len = m * (.007 + .05 * n * n);
+    const ang = (i / BARS) * 6.2832 - 1.5708;
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    cx.moveTo(W / 2 + ca * r0, H / 2 + sa * r0);
+    cx.lineTo(W / 2 + ca * (r0 + len), H / 2 + sa * (r0 + len));
+  }
+  cx.stroke();
 
   // floating particles
   const pc = col.map(v => Math.round(v * .5 + 127));
@@ -725,6 +770,8 @@ function render(data) {
     || (item.images && item.images[0] && item.images[0].url) || null;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
+  const albumName = item.album ? item.album.name : (item.show ? item.show.name : '');
+  const year = item.album && item.album.release_date ? item.album.release_date.slice(0, 4) : '';
 
   // Keep the last track under the idle animation after pause/stop
   if (CONFIG.IDLE_TRACK) {
@@ -750,16 +797,23 @@ function render(data) {
     setTimeout(() => {
       $('title').textContent = censor(item.name);
       $('artist').textContent = censor(artist);
+      $('album').textContent = censor(albumName) + (year ? ' \u00B7 ' + year : '');
       $('info').classList.remove('hidden');
     }, $('title').textContent ? 350 : 0);
     tick();
     requestAnimationFrame(() => requestAnimationFrame(() => { $('ringFill').style.transition = ''; }));
 
     lyrics = []; lyricIdx = -8; buildList();
+    document.body.classList.remove('nolyrics');
+    $('noLyrics').textContent = censor(albumName);
     if (CONFIG.SHOW_LYRICS && item.type === 'track') {
       fetchLyrics(item).then(l => {
-        if (cur.id === item.id) { lyrics = l; lyricIdx = -8; buildList(); lyricTick(); }
+        if (cur.id !== item.id) return;
+        lyrics = l; lyricIdx = -8; buildList(); lyricTick();
+        document.body.classList.toggle('nolyrics', !l.length);
       });
+    } else if (CONFIG.SHOW_LYRICS) {
+      document.body.classList.add('nolyrics'); // podcasts etc.
     }
   } else {
     $('info').classList.remove('hidden');
