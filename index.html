@@ -8,7 +8,6 @@
   :root {
     --r: min(64vh, 34vw);      /* record size: everything scales from this */
     --ink: #efe9de;
-    --clock-top: #fff;
     --glow: 140,120,110;       /* overwritten from the album art */
   }
   * { box-sizing: border-box; margin: 0; }
@@ -19,7 +18,6 @@
     -webkit-font-smoothing: antialiased;
   }
   body.light { background: #e9e4d9; --ink: #1b1814; }
-  body.light { --clock-top: #1b1814; }
   body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
   body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
 
@@ -37,91 +35,41 @@
   }
   body.light .vignette { display: none; }
 
-  /* Idle ambient light: slow drifting color blobs */
-  .aurora {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    opacity: 0; transition: opacity 2.5s ease;
-    background:
-      radial-gradient(ellipse 50% 60% at 20% 30%, rgba(var(--glow), .24), transparent 70%),
-      radial-gradient(ellipse 45% 55% at 80% 70%, rgba(var(--glow), .16), transparent 70%);
-    animation: drift 26s ease-in-out infinite alternate;
+  /* ---------- Idle animation ---------- */
+  #idleCanvas {
+    position: fixed; inset: 0; z-index: 3; width: 100%; height: 100%;
+    pointer-events: none; opacity: 0; transition: opacity 2s ease;
   }
-  @keyframes drift { to { transform: translate(-3%, 2%) scale(1.12); } }
-  body.idle .aurora { opacity: 1; }
-
-  /* Small clock (while playing, if enabled) */
-  .clock {
-    position: fixed; top: 4vh; left: 3vw; z-index: 2;
-    font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; letter-spacing: .01em; opacity: .5;
-    transition: opacity 1.2s ease;
+  body.idle #idleCanvas { opacity: 1; }
+  .idlelayer {
+    position: fixed; inset: 0; z-index: 4; pointer-events: none;
+    opacity: 0; transition: opacity 2s ease;
   }
-
-  /* Big idle clock: the digits are dead center, everything else hangs below */
-  .big {
-    position: fixed; inset: 0; z-index: 3; pointer-events: none;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; transform: scale(.96);
-    transition: opacity 1.4s ease, transform 2s ease;
+  body.idle .idlelayer { opacity: 1; }
+  .idlecenter {
+    position: absolute; left: 50%; top: 50%;
+    width: 26vmin; height: 26vmin; margin: -13vmin 0 0 -13vmin;
+    animation: breathe 7s ease-in-out infinite;
   }
-  body.idle .big { opacity: 1; transform: scale(1); }
-  body.idle .clock { opacity: 0; }
-
-  .bigwrap {
-    animation: sway 45s ease-in-out infinite alternate; /* tiny drift, avoids burn-in */
-  }
-  @keyframes sway {
-    from { transform: translate(-.6vw, -.6vh); }
-    to   { transform: translate(.6vw, .6vh); }
-  }
-  .timerow {
-    position: relative; display: inline-block;
-    font-size: clamp(80px, 22vw, 420px); line-height: 1;
-  }
-  .bigtime {
-    display: block; white-space: nowrap; text-align: center;
-    font-weight: 200; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
-    background: linear-gradient(180deg, var(--clock-top) 25%, rgb(var(--glow)) 135%);
-    -webkit-background-clip: text; background-clip: text;
-    color: transparent; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 3vh rgba(var(--glow), .45));
-  }
-  .bigtime .colon { margin: 0 .02em; } /* no animation/opacity here: breaks gradient text in WebKit */
-  .ampm {
-    position: absolute; left: 100%; bottom: .14em; margin-left: .06em;
-    font-size: .16em; font-weight: 400; letter-spacing: .02em; opacity: .7; white-space: nowrap;
-  }
-  .bigmeta {
-    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    width: max-content; padding-top: 2vh;
-    display: flex; flex-direction: column; align-items: center;
-    font-size: 16px; line-height: normal; /* reset from .timerow */
-  }
-  .bigdate {
-    font-size: clamp(14px, 1.6vw, 30px); font-weight: 400;
-    letter-spacing: .22em; text-transform: uppercase; opacity: .55;
-  }
-  .bigsec {
-    width: 26vw; height: 2px; margin-top: 3.5vh; border-radius: 2px; overflow: hidden;
-    background: rgba(255,255,255,.12);
-  }
-  body.light .bigsec { background: rgba(0,0,0,.12); }
-  .bigsec i {
-    display: block; height: 100%; background: rgb(var(--glow));
-    transform-origin: left; transform: scaleX(0);
-    transition: transform 1s linear; box-shadow: 0 0 1.2vh rgba(var(--glow), .9);
-  }
-  .bigtrack {
-    margin-top: 4.5vh; display: flex; align-items: center; gap: 1.2vw;
-    font-size: clamp(13px, 1.2vw, 22px); opacity: 0; transition: opacity 1s ease;
-  }
-  .bigtrack.has { opacity: .6; }
-  #bigTrackName { max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bigart {
-    width: 5vh; height: 5vh; border-radius: 50%; flex: none;
+  @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .idleart {
+    position: relative; width: 100%; height: 100%; border-radius: 50%;
     background: #3a322c center / cover no-repeat;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 0 1.6vh rgba(var(--glow), .5);
-    animation: spin 14s linear infinite;
+    box-shadow: 0 0 0 .5vmin rgba(0,0,0,.55), 0 0 0 .7vmin rgba(255,255,255,.1),
+      0 0 7vmin rgba(var(--glow), .6), 0 0 18vmin rgba(var(--glow), .3);
+    animation: spin 26s linear infinite;
   }
+  .idleart::after { /* spindle hole */
+    content: ""; position: absolute; inset: 47%; border-radius: 50%;
+    background: #0b0a09; box-shadow: 0 0 0 .3vmin rgba(255,255,255,.15);
+  }
+  .idletrack {
+    position: absolute; left: 0; right: 0; bottom: 7vh; padding: 0 8vw;
+    text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: clamp(13px, 1.25vw, 24px); font-weight: 500; letter-spacing: .06em;
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  .idletrack.has { opacity: .55; }
 
   .stage {
     position: relative; z-index: 1; width: 100%; height: 100%;
@@ -222,14 +170,7 @@
   /* ---------- Right column ---------- */
   .side {
     position: relative; flex: none; width: 44vw; height: 78vh;
-    padding-left: 2.6vw;
     display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .side::before { /* glowing accent line */
-    content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 2px; border-radius: 2px;
-    background: linear-gradient(transparent, rgba(var(--glow), .9) 25%, rgba(var(--glow), .9) 75%, transparent);
-    box-shadow: 0 0 2vh rgba(var(--glow), .6);
-    opacity: .75;
   }
   .lyrics {
     flex: 1; position: relative; overflow: hidden;
@@ -300,8 +241,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .record { animation-duration: 12s; }
-    .tilt, .floor, .glow { animation: none; }
-    .aurora, .bigwrap, .bigart, .eq i { animation: none; }
+    .tilt, .floor, .glow, .idlecenter, .idleart, .eq i { animation: none; }
   }
 </style>
 </head>
@@ -309,23 +249,11 @@
   <div class="bg" id="bg0"></div>
   <div class="bg" id="bg1"></div>
   <div class="vignette"></div>
-  <div class="aurora"></div>
-  <div class="clock" id="clock"></div>
-  <div class="big">
-    <div class="bigwrap">
-      <div class="timerow">
-        <div class="bigtime" id="bigTime"></div>
-        <div class="ampm" id="bigAmpm"></div>
-        <div class="bigmeta">
-          <div class="bigdate" id="bigDate"></div>
-          <div class="bigsec"><i id="bigSec"></i></div>
-          <div class="bigtrack" id="bigTrack">
-            <div class="bigart" id="bigArt"></div>
-            <div id="bigTrackName"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+
+  <canvas id="idleCanvas"></canvas>
+  <div class="idlelayer">
+    <div class="idlecenter"><div class="idleart" id="idleArt"></div></div>
+    <div class="idletrack" id="idleTrack"></div>
   </div>
 
   <div class="stage">
@@ -376,9 +304,9 @@ const CONFIG = {
   SHOW_PROGRESS: true,   // thin progress ring around the record
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
-  SHOW_CLOCK: false,      // small clock, top left
-  IDLE_CLOCK: true,      // big clock when music is paused or stopped
-  IDLE_SECONDS: 10,      // how long music must be stopped before the big clock appears
+  IDLE_ANIMATION: true,  // generative animation when music is paused or stopped
+  IDLE_TRACK: true,      // show the last played track under the animation
+  IDLE_SECONDS: 10,      // how long music must be stopped before the animation appears
   CENSOR: true,          // replace explicit words with ***
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
   POLL_MS: 3000
@@ -408,44 +336,144 @@ const censorRe = new RegExp(
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
 const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
 
-// ---------- Clocks ----------
-let lastTime = '';
-function updateClock() {
-  const now = new Date();
-  const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  $('clock').textContent = time;
-  if (time !== lastTime) {
-    lastTime = time;
-    const m = time.match(/^(\d+)\D+(\d{2})\s*(.*)$/);
-    if (m) {
-      $('bigTime').innerHTML = `${m[1]}<span class="colon">:</span>${m[2]}`;
-      $('bigAmpm').textContent = m[3];
-    } else {
-      $('bigTime').textContent = time;
-      $('bigAmpm').textContent = '';
+// ---------- Idle animation (canvas) ----------
+const cv = $('idleCanvas');
+const cx = cv.getContext('2d');
+let W = 0, H = 0;
+function resizeCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+let col = [140, 120, 110], colT = [140, 120, 110]; // current and target color (eases between albums)
+
+function rgb2hsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h, s, l];
+}
+function hsl2rgb(h, s, l) {
+  if (s === 0) { const v = Math.round(l * 255); return [v, v, v]; }
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => {
+    t = (t + 1) % 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map(v => Math.round(v * 255));
+}
+const shiftHue = (c, dh) => { const [h, s, l] = rgb2hsl(c[0], c[1], c[2]); return hsl2rgb((h + dh + 1) % 1, s, l); };
+
+const ORBS = Array.from({ length: 6 }, (_, i) => ({
+  fx: .05 + Math.random() * .06, fy: .04 + Math.random() * .06, fr: .08 + Math.random() * .08,
+  px: Math.random() * 6.28, py: Math.random() * 6.28
+}));
+const DOTS = Array.from({ length: 80 }, () => ({
+  x: Math.random(), y: Math.random(), s: .5 + Math.random() * 1.6,
+  vy: .004 + Math.random() * .014, ph: Math.random() * 6.28, sp: .6 + Math.random() * 1.4
+}));
+let ripples = [], lastSpawn = 0, raf = 0, last = 0, stopTimer = null;
+
+function frame(now) {
+  raf = requestAnimationFrame(frame);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const t = now / 1000;
+  for (let i = 0; i < 3; i++) col[i] += (colT[i] - col[i]) * Math.min(1, dt * 1.5);
+  const cA = col.map(Math.round), cols = [cA, shiftHue(col, .07), shiftHue(col, -.07)];
+  const m = Math.min(W, H);
+
+  cx.globalCompositeOperation = 'source-over';
+  cx.clearRect(0, 0, W, H);
+  cx.globalCompositeOperation = 'lighter';
+
+  // drifting color orbs
+  ORBS.forEach((o, i) => {
+    const x = W * (.5 + .36 * Math.sin(t * o.fx + o.px));
+    const y = H * (.5 + .32 * Math.cos(t * o.fy + o.py));
+    const r = m * (.42 + .08 * Math.sin(t * o.fr + o.px));
+    const c = cols[i % 3];
+    const g = cx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},.2)`);
+    g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+    cx.fillStyle = g;
+    cx.fillRect(x - r, y - r, r * 2, r * 2);
+  });
+
+  // ripples spreading out from the center disc, like grooves
+  if (t - lastSpawn > 2.8) { ripples.push(t); lastSpawn = t; }
+  const maxR = Math.hypot(W, H) * .52, baseR = m * .13;
+  for (let k = ripples.length - 1; k >= 0; k--) {
+    const p = (t - ripples[k]) / 11;
+    if (p >= 1) { ripples.splice(k, 1); continue; }
+    const radius = baseR + (maxR - baseR) * (1 - Math.pow(1 - p, 2));
+    const a = Math.pow(1 - p, 1.4);
+    for (let j = 0; j < 3; j++) {
+      const rr = radius - j * m * .018;
+      if (rr <= 0) continue;
+      const c = cols[j % 3];
+      cx.beginPath(); cx.arc(W / 2, H / 2, rr, 0, 6.2832);
+      cx.lineWidth = m * .012;
+      cx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${.07 * a * (1 - j * .25)})`;
+      cx.stroke();
+      cx.lineWidth = 1.2;
+      cx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${.5 * a * (1 - j * .3)})`;
+      cx.stroke();
     }
   }
-  $('bigDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-  const s = now.getSeconds(), bar = $('bigSec');
-  bar.style.transition = s === 0 ? 'none' : '';
-  bar.style.transform = `scaleX(${s / 60})`;
+
+  // floating particles
+  const pc = col.map(v => Math.round(v * .5 + 127));
+  for (const d of DOTS) {
+    d.y -= d.vy * dt; if (d.y < -.02) { d.y = 1.02; d.x = Math.random(); }
+    const a = .15 + .35 * (.5 + .5 * Math.sin(t * d.sp + d.ph));
+    cx.fillStyle = `rgba(${pc[0]},${pc[1]},${pc[2]},${a})`;
+    cx.beginPath(); cx.arc(d.x * W, d.y * H, d.s, 0, 6.2832); cx.fill();
+  }
 }
-updateClock();
-setInterval(updateClock, 1000);
-if (!CONFIG.SHOW_CLOCK) $('clock').style.display = 'none';
+function idleStart() {
+  clearTimeout(stopTimer);
+  if (raf) return;
+  last = performance.now();
+  const t = last / 1000;
+  ripples = [t - 8, t - 5.4, t - 2.8]; lastSpawn = t;
+  raf = requestAnimationFrame(frame);
+}
+function idleStop() {
+  clearTimeout(stopTimer);
+  stopTimer = setTimeout(() => { cancelAnimationFrame(raf); raf = 0; }, 2400); // after the fade-out
+}
 
 // Idle = nothing playing (paused or stopped) for IDLE_SECONDS.
 let idleTimer = null;
 function setIdle(on) {
-  if (!CONFIG.IDLE_CLOCK) return;
+  if (!CONFIG.IDLE_ANIMATION) return;
   if (on) {
     if (!idleTimer) {
-      idleTimer = setTimeout(() => document.body.classList.add('idle'), CONFIG.IDLE_SECONDS * 1000);
+      idleTimer = setTimeout(() => {
+        document.body.classList.add('idle');
+        idleStart();
+      }, CONFIG.IDLE_SECONDS * 1000);
     }
   } else {
     clearTimeout(idleTimer);
     idleTimer = null;
-    document.body.classList.remove('idle');
+    if (document.body.classList.contains('idle')) {
+      document.body.classList.remove('idle');
+      idleStop();
+    }
   }
 }
 
@@ -561,6 +589,7 @@ function glowColor(rgb) {
 function applyGlow(rgb) {
   const [r, g, b] = glowColor(rgb);
   document.body.style.setProperty('--glow', `${r},${g},${b}`);
+  colT = [r, g, b]; // idle animation eases toward this
   return [r, g, b];
 }
 
@@ -665,6 +694,7 @@ function setArt(url) {
   if (url === lastArt) return;
   lastArt = url;
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
+  $('idleArt').style.backgroundImage = url ? `url(${url})` : 'none';
   (url ? extractColor(url) : Promise.resolve(null)).then(c => {
     if (lastArt !== url) return;
     const glow = applyGlow(c);
@@ -688,10 +718,11 @@ function render(data) {
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
 
-  // Keep the last track on the idle clock after pause/stop
-  $('bigTrackName').textContent = censor(item.name) + ' \u2014 ' + censor(artist);
-  $('bigArt').style.backgroundImage = art ? `url(${art})` : 'none';
-  $('bigTrack').classList.add('has');
+  // Keep the last track under the idle animation after pause/stop
+  if (CONFIG.IDLE_TRACK) {
+    $('idleTrack').textContent = censor(item.name) + ' \u2014 ' + censor(artist);
+    $('idleTrack').classList.add('has');
+  }
 
   const changed = item.id !== cur.id;
   cur.id = item.id;
