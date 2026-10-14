@@ -335,14 +335,14 @@ const CONFIG = {
   BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark' | 'light'
   SHOW_PROGRESS: true,   // thin progress ring around the record
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
-  LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
+  LYRICS_OFFSET: 0.05,    // seconds; raise if lyrics feel late, lower if early
   GRAIN: true,           // fine film grain over everything
   IDLE_ANIMATION: true,  // generative animation when music is paused or stopped
   IDLE_TRACK: true,      // show the last played track under the animation
   IDLE_SECONDS: 10,      // how long music must be stopped before the animation appears
   CENSOR: true,          // replace explicit words with ***
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
-  POLL_MS: 3000
+  POLL_MS: 500
 };
 // ----------------------------
 
@@ -362,9 +362,8 @@ if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
 
 // ---------- Censoring ----------
-const CONTAINS = ['fuck', 'shit'];
-const WORDS = ['bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy', 'cunt', 'whore', 'slut',
-  'piss', 'ass', 'jackass', 'dumbass', 'badass', 'nigga', 'nigger'];
+const CONTAINS = [];
+const WORDS = ['nigga', 'nigger'];
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
