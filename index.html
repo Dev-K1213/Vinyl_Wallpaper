@@ -170,15 +170,23 @@
   /* ---------- Right column ---------- */
   .side {
     position: relative; flex: none; width: 44vw; height: 78vh;
+    padding-left: 2.6vw;
     display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .side::before { /* glowing accent line */
+    content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 2px; border-radius: 2px;
+    background: linear-gradient(transparent, rgba(var(--glow), .9) 25%, rgba(var(--glow), .9) 75%, transparent);
+    box-shadow: 0 0 2vh rgba(var(--glow), .6);
+    opacity: .75;
   }
   .lyrics {
     flex: 1; position: relative; overflow: hidden;
+    margin: 0 -6vh; /* extra room so the text glow isn't clipped into a bar */
     -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
             mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
   }
   .lyricList {
-    position: absolute; left: 0; right: 0; top: 0; padding-right: 1vw;
+    position: absolute; left: 0; right: 0; top: 0; padding: 0 6vh;
     transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform;
   }
   .ll {
