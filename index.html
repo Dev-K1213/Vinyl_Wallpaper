@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vinyl Wallpaper</title>
 <style>
-  /* 1rem = 1% of the scene width. The scene is a 16:10 box that always covers the screen. */
+  /* 1rem = 1% of the scene width. Scene is a 16:10 box covering the screen. */
   html { font-size: calc(max(100vw, 160vh) / 100); }
   *, *:before, *:after { box-sizing: border-box; margin: 0; }
-  html, body { height: 100%; overflow: hidden; background: #2a140a; }
+  html, body { height: 100%; overflow: hidden; background: #111; }
   body {
     color: #fff3e4;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
@@ -20,88 +20,35 @@
   .scene { position: fixed; left: 50%; top: 50%; width: 100rem; height: 62.5rem; transform: translate(-50%, -50%); }
   .scene > * { position: absolute; }
 
-  /* ---------- Room ---------- */
-  .wall {
-    left: 0; top: 0; width: 100%; height: 33.6rem;
-    background:
-      radial-gradient(60rem 30rem at 12% 35%, rgba(255,196,150,.38), transparent 70%),
-      radial-gradient(40rem 34rem at 91% 70%, rgba(255,172,96,.5), transparent 70%),
-      linear-gradient(180deg, #9a6249 0%, #b07a5a 45%, #a3694b 100%);
+  /* ---------- Exact Reference Photo Background ---------- */
+  .bg-photo {
+    left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none;
   }
-  .desk {
-    left: 0; top: 33.6rem; width: 100%; height: 40rem;
-    background:
-      radial-gradient(45rem 16rem at 90% 0%, rgba(255,150,70,.5), transparent 70%),
-      radial-gradient(30rem 12rem at 10% 4%, rgba(255,150,80,.28), transparent 70%),
-      repeating-linear-gradient(180deg, rgba(0,0,0,.07) 0 .12rem, transparent .12rem .9rem),
-      linear-gradient(180deg, #7a3a1a 0%, #5a2a12 18%, #3c1c0b 100%);
-    box-shadow: inset 0 .15rem 0 rgba(255,190,130,.35);
-  }
-  .vig {
-    left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;
-    background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,0,0,.45) 100%);
-  }
-
-  /* Painting - Matched to classic floral artwork in reference */
-  .frame {
-    left: 47.5rem; top: -2rem; width: 27.7rem; height: 17.3rem; background: #1a0f0a;
-    box-shadow: 0 0 3rem rgba(255,140,70,.35), inset 0 0 0 .2rem rgba(255,255,255,.08);
-  }
-  .mat { position: absolute; inset: .8rem; background: #15110e; box-shadow: inset 0 0 .8rem rgba(0,0,0,.6); }
-  .paint {
-    position: absolute; inset: 1.5rem 2rem;
-    background: 
-      radial-gradient(circle at 35% 45%, #c8a268 0, transparent 15%),
-      radial-gradient(circle at 65% 55%, #825a6e 0, transparent 20%),
-      radial-gradient(circle at 50% 30%, #506852 0, transparent 25%),
-      linear-gradient(135deg, #1f1814 0%, #0d0a08 100%);
-    opacity: 0.85;
-  }
-
-  /* Lamp - Rounded bell shade like reference */
-  .halo { left: 70rem; top: 8rem; width: 40rem; height: 40rem;
-    background: radial-gradient(circle, rgba(255,190,110,.35), transparent 65%); }
-  .shade {
-    left: 84.5rem; top: 25.5rem; width: 12.2rem; height: 11rem; border-radius: 6.1rem 6.1rem 2rem 2rem;
-    background:
-      repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 .12rem, transparent .12rem .8rem),
-      radial-gradient(ellipse at 50% 60%, #fffde8 0, #ffdeaf 30%, #f3ad6e 70%, #d8995f 100%);
-    box-shadow: 0 0 6rem rgba(255,170,90,.6);
-  }
-  .bulb { position: absolute; left: 30%; top: 35%; width: 40%; height: 50%; border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 50%, #fffdf5, #ffe8bf 60%, transparent 100%); filter: blur(.2rem); }
-  .neck { left: 89.2rem; top: 36.5rem; width: 2.4rem; height: 3.5rem;
-    background: linear-gradient(90deg, #5e4318, #d7b25f 45%, #4a3312); }
-  .lbase { left: 86.5rem; top: 39.5rem; width: 7.4rem; height: 2.2rem; border-radius: 50% 50% 10% 10% / 90% 90% 10% 10%;
-    background: linear-gradient(90deg, #5e4318, #d7b25f 45%, #4a3312); box-shadow: 0 .8rem 1.4rem rgba(0,0,0,.5); }
 
   /* ---------- Album on its ledge ---------- */
   .cover {
     left: 6.1rem; top: 22.5rem; width: 24rem; height: 23.6rem; background: #17120f center / cover no-repeat;
     transform: rotate(-3deg); transform-origin: bottom left;
-    box-shadow: 1rem 1.4rem 3rem rgba(0,0,0,.55);
+    box-shadow: 1rem 1.4rem 3rem rgba(0,0,0,.65);
+    z-index: 2;
   }
   .cover::after { content: ""; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,.1), transparent 40%); }
+    background: linear-gradient(135deg, rgba(255,255,255,.12), transparent 40%); }
   .cover.in { animation: coverIn .9s ease; }
   @keyframes coverIn { from { opacity: 0; } to { opacity: 1; } }
-  .ledge {
-    left: 6.8rem; top: 45.4rem; width: 25.3rem; height: 2.3rem;
-    background: linear-gradient(#b08c52, #6e4d24); box-shadow: 0 1rem 1.6rem rgba(0,0,0,.5), inset 0 .12rem 0 rgba(255,255,255,.25);
-  }
 
   /* Track info on the desk below the album */
-  .info { left: 6.4rem; top: 51.2rem; width: 25rem; transition: opacity .5s ease; }
+  .info { left: 6.4rem; top: 48.5rem; width: 25rem; transition: opacity .5s ease; z-index: 2; }
   .info.hidden { opacity: 0; }
-  .title { font-size: 1.7rem; font-weight: 600; line-height: 1.15; letter-spacing: -.012em; }
-  .artist { margin-top: .5rem; font-size: 1.15rem; opacity: .65; }
-  .bar { margin-top: 1.6rem; height: .1rem; background: rgba(255,243,228,.2); }
-  .bar i { display: block; height: 100%; background: #fff3e4; opacity: .85;
+  .title { font-size: 1.7rem; font-weight: 600; line-height: 1.15; letter-spacing: -.012em; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+  .artist { margin-top: .4rem; font-size: 1.15rem; opacity: .8; text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+  .bar { margin-top: 1.2rem; height: .12rem; background: rgba(255,243,228,.25); border-radius: 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: #fff3e4; opacity: .95;
     transform-origin: left; transform: scaleX(0); transition: transform 1s linear; }
 
   /* Lyrics on the wall */
   .lyrics {
-    left: 5rem; top: 2.5rem; width: 41rem; height: 18.5rem; overflow: hidden;
+    left: 5rem; top: 2.5rem; width: 41rem; height: 18.5rem; overflow: hidden; z-index: 2;
     -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
             mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
     transition: opacity 1s ease;
@@ -111,58 +58,26 @@
   .ll {
     font-size: 1.9rem; font-weight: 600; line-height: 1.22; letter-spacing: -.012em;
     padding: .55rem 0; opacity: .3; transform: scale(.9); transform-origin: left center;
-    text-shadow: 0 0 1rem rgba(70,25,5,.55);
+    text-shadow: 0 0 1.2rem rgba(40,15,5,.85);
     transition: opacity .6s ease, transform .6s ease;
   }
-  .ll.near { opacity: .5; }
+  .ll.near { opacity: .55; }
   .ll.on { opacity: 1; transform: scale(1); }
 
   /* Clocks */
-  .clock { right: 3.2rem; top: 4.2rem; font-size: 1.5rem; font-weight: 500; opacity: .75;
-    text-shadow: 0 0 1rem rgba(70,25,5,.5); transition: opacity 1.2s ease; }
-  .big { left: 5rem; top: 3rem; opacity: 0; pointer-events: none; transition: opacity 1.2s ease;
-    text-shadow: 0 0 2rem rgba(70,25,5,.45); }
+  .clock { right: 3.2rem; top: 4.2rem; font-size: 1.5rem; font-weight: 500; opacity: .85; z-index: 2;
+    text-shadow: 0 0 1rem rgba(40,15,5,.7); transition: opacity 1.2s ease; }
+  .big { left: 5rem; top: 3rem; opacity: 0; pointer-events: none; transition: opacity 1.2s ease; z-index: 2;
+    text-shadow: 0 0 2rem rgba(40,15,5,.6); }
   .bigtime { font-size: 10rem; font-weight: 200; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-  .bigdate { margin-top: 1rem; font-size: 2rem; opacity: .75; }
+  .bigdate { margin-top: 1rem; font-size: 2rem; opacity: .8; }
   body.idle .big { opacity: 1; }
   body.idle .clock, body.idle .lyrics, body.idle .info { opacity: 0; }
 
-  /* ---------- Record stack (recently played albums) ---------- */
-  .stack { left: 71rem; top: 40rem; width: 25rem; height: 14rem; perspective: 70rem; }
-  .sl {
-    position: absolute; width: 17rem; height: 17rem; background: #3a2c25 center / cover no-repeat;
-    border-bottom: .3rem solid rgba(0,0,0,.45); border-right: .2rem solid rgba(0,0,0,.35);
-    transform-origin: 50% 100%; box-shadow: .6rem 1.2rem 2rem rgba(0,0,0,.5);
-  }
-  .s0 { left: 4rem; top: -2rem; transform: rotateX(55deg) rotateZ(-5deg); }
-  .s1 { left: 2rem; top: -1rem; background-color: #4a3a30; transform: rotateX(55deg) rotateZ(-2deg); }
-  .s2 { left: 0rem; top: 0rem; background-color: #2c221c; transform: rotateX(55deg) rotateZ(1deg); }
-
-  /* ---------- Turntable (Wood/Bronze styling matching reference) ---------- */
-  .tt { left: 33.6rem; top: 34.5rem; width: 33.6rem; height: 14.1rem; }
+  /* ---------- Turntable (Aligned over the photo) ---------- */
+  .tt { left: 33.6rem; top: 34.5rem; width: 33.6rem; height: 14.1rem; z-index: 2; pointer-events: none; }
   .tt > * { position: absolute; }
-  .ttshadow { left: 1rem; top: 9rem; width: 32rem; height: 6rem; background: rgba(0,0,0,.55); filter: blur(1.6rem); }
-  .plate {
-    left: 0; top: 0; width: 100%; height: 10.5rem;
-    clip-path: polygon(4.2% 0, 95.8% 0, 100% 100%, 0 100%);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.25), transparent 8%),
-      linear-gradient(#f4f1ea, #dcd5c7);
-  }
-  .front {
-    left: 0; top: 10.5rem; width: 100%; height: 3.6rem; border-radius: 0 0 .5rem .5rem;
-    background:
-      repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 .1rem, transparent .1rem .6rem),
-      linear-gradient(#4e3320, #2c1c11);
-    box-shadow: inset 0 .15rem 0 rgba(255,255,255,.15);
-  }
-  .pside {
-    left: 1.1rem; top: -.3rem; width: 22.6rem; height: 9.27rem; border-radius: 50%;
-    background: #b7b2a8;
-    box-shadow: 0 .35rem 0 #8b877f, 0 .7rem 0 #c4bfb5, 0 1.05rem 0 #7e7a72,
-                0 1.4rem 0 #b0aba1, 0 1.75rem 0 #6f6b64, 0 2.6rem 2rem rgba(0,0,0,.45);
-  }
-  .ptop { left: 1.5rem; top: -6.6rem; width: 21.8rem; height: 21.8rem; transform: scaleY(.41); }
+  .ptop { left: 1.5rem; top: -6.6rem; width: 21.8rem; height: 21.8rem; transform: scaleY(.41); pointer-events: auto; }
   .record {
     position: absolute; inset: 0; border-radius: 50%;
     background:
@@ -193,10 +108,6 @@
             mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
   }
 
-  .pbase {
-    left: 27rem; top: -1.3rem; width: 2.8rem; height: 3.4rem; border-radius: 1rem 1rem .8rem .8rem / .9rem .9rem .6rem .6rem;
-    background: linear-gradient(90deg, #1a1816, #47423d 50%, #141210); box-shadow: 0 .8rem 1rem rgba(0,0,0,.4);
-  }
   .arm {
     left: 28.4rem; top: .2rem; width: 0; height: 0; z-index: 4;
     transform: rotate(132deg);
@@ -205,14 +116,12 @@
   body.playing .arm { transform: rotate(156deg); }
   .arm > * { position: absolute; }
   .tube { left: 0; top: -.2rem; width: 12.3rem; height: .4rem; border-radius: 1rem;
-    background: linear-gradient(#f0ebe0, #8b877f); box-shadow: 0 .5rem .6rem rgba(0,0,0,.3); }
+    background: linear-gradient(#f0ebe0, #8b877f); box-shadow: 0 .5rem .6rem rgba(0,0,0,.4); }
   .cw { left: -3.1rem; top: -.8rem; width: 2.9rem; height: 1.6rem; border-radius: .5rem;
     background: linear-gradient(#8c8882, #45423e); }
   .head { left: 11.7rem; top: -.75rem; width: 1.8rem; height: 1.5rem; border-radius: .25rem;
     background: linear-gradient(#b96a2c, #6b3a15); }
-  .knob { left: 29.2rem; top: 7.9rem; width: 1.4rem; height: 1.4rem; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #f0d796, #8a6a2c 75%); box-shadow: 0 .3rem .6rem rgba(0,0,0,.4); }
-  .led { left: 26.9rem; top: 9rem; width: .5rem; height: .5rem; border-radius: 50%; background: #2a1d17;
+  .led { left: 26.9rem; top: 9rem; width: .5rem; height: .5rem; border-radius: 50%; background: #2a1d17; z-index: 5;
     transition: background .4s, box-shadow .4s; }
   body.playing .led { background: #ff8a4d; box-shadow: 0 0 1rem #ff8a4d; }
 
@@ -220,7 +129,7 @@
   #connect {
     display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
     font: inherit; font-size: 1.4rem; font-weight: 600; padding: .9rem 2rem; border-radius: 99px; border: 0;
-    background: #fff3e4; color: #2a140a; cursor: pointer;
+    background: #fff3e4; color: #2a140a; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
   body.needs-login #connect { display: block; }
   body.needs-login .lyrics, body.needs-login .info, body.setup .lyrics, body.setup .info { display: none; }
@@ -228,8 +137,8 @@
   body.needs-login #connect { cursor: pointer; }
   #transfer {
     display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
-    width: min(560px, 80vw); padding: 20px; border-radius: 14px; background: rgba(20,10,5,.9);
-    font-size: 16px; line-height: 1.5;
+    width: min(560px, 80vw); padding: 20px; border-radius: 14px; background: rgba(20,10,5,.95);
+    font-size: 16px; line-height: 1.5; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
   body.setup #transfer { display: block; }
   #transfer textarea {
@@ -242,41 +151,25 @@
 </head>
 <body>
 <div class="scene">
-  <div class="wall"></div>
-  <div class="desk"></div>
-  <div class="vig"></div>
-
-  <div class="frame"><div class="mat"><div class="paint"></div></div></div>
-  <div class="halo"></div>
-  <div class="shade"><div class="bulb"></div></div>
-  <div class="neck"></div>
-  <div class="lbase"></div>
+  <!-- Exact reference photo as background -->
+  <img src="background.png" class="bg-photo" alt="Wallpaper Background">
 
   <div class="clock" id="clock"></div>
   <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
   <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
 
   <div class="cover" id="cover"></div>
-  <div class="ledge"></div>
   <div class="info hidden" id="info">
     <div class="title" id="title"></div>
     <div class="artist" id="artist"></div>
     <div class="bar"><i id="fill"></i></div>
   </div>
 
-  <div class="stack" id="stack"><div class="sl s2"></div><div class="sl s1"></div><div class="sl s0"></div></div>
-
   <div class="tt">
-    <div class="ttshadow"></div>
-    <div class="plate"></div>
-    <div class="front"></div>
-    <div class="pside"></div>
     <div class="ptop">
       <div class="record"><div class="label" id="label"></div><div class="hole"></div></div>
       <div class="sheen"></div>
     </div>
-    <div class="pbase"></div>
-    <div class="knob"></div>
     <div class="led"></div>
     <div class="arm"><div class="cw"></div><div class="tube"></div><div class="head"></div></div>
   </div>
@@ -293,15 +186,14 @@
 const CONFIG = {
   CLIENT_ID: '7accde9c16c942b0b671362deca8a31a',
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
-  SHOW_PROGRESS: true,   // thin progress line under the track
-  SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
-  LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
-  SHOW_CLOCK: true,      // small clock, top right
-  SHOW_STACK: true,      // pile of recently played albums on the right
-  IDLE_CLOCK: true,      // big clock when music is paused or stopped
-  IDLE_SECONDS: 10,      // how long music must be stopped before the big clock appears
-  CENSOR: true,          // replace explicit words with ***
-  EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
+  SHOW_PROGRESS: true,
+  SHOW_LYRICS: true,
+  LYRICS_OFFSET: 0.3,
+  SHOW_CLOCK: true,
+  IDLE_CLOCK: true,
+  IDLE_SECONDS: 10,
+  CENSOR: true,
+  EXTRA_WORDS: [],
   POLL_MS: 3000
 };
 // ----------------------------
@@ -318,7 +210,6 @@ const LS = {
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) document.querySelector('.bar').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
-if (!CONFIG.SHOW_STACK) $('stack').style.display = 'none';
 
 // ---------- Censoring ----------
 const CONTAINS = ['fuck', 'shit'];
@@ -355,7 +246,7 @@ function setIdle(on) {
   }
 }
 
-// ---------- Spotify auth ----------
+// ---------- Spotify Auth ----------
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -533,28 +424,11 @@ window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
 // ---------- Rendering ----------
 let lastArt = null;
-const albumHistory = [];
 const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
-
-function renderStack() {
-  ['s0', 's1', 's2'].forEach((c, i) => {
-    const el = document.querySelector('.' + c);
-    el.style.backgroundImage = albumHistory[i] ? `url(${albumHistory[i]})` : 'none';
-  });
-}
 
 function setArt(url) {
   if (url === lastArt) return;
-  if (lastArt) {
-    const j = albumHistory.indexOf(lastArt);
-    if (j > -1) albumHistory.splice(j, 1);
-    albumHistory.unshift(lastArt);
-  }
-  const k = albumHistory.indexOf(url);
-  if (k > -1) albumHistory.splice(k, 1);
-  albumHistory.length = Math.min(albumHistory.length, 3);
   lastArt = url;
-  renderStack();
 
   const cover = $('cover');
   cover.style.backgroundImage = url ? `url(${url})` : 'none';
