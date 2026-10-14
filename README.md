@@ -7,5 +7,8 @@ Deploy index.html on GitHub Pages path. In Spotify Developer Dashboard, add the 
 For the one-time Plash refresh-token transfer flow, use the page URL with ?setup, connect Spotify, then copy the URL it displays into Plash. Treat the resulting refresh-token URL as private.
 
 Current bug fixes needed:
- - Pink bars on lyrics
- - Songs with no lyrics fade to black
+ - None so Far
+
+New features wanting to add
+ - Smoother transition between songs
+ - Spice up Lock screen
