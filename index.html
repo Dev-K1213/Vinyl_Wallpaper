@@ -5,78 +5,166 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vinyl Wallpaper</title>
 <style>
-  :root { --h: min(76vh, 44vw); --ink: #efe9de; }
+  /* 1rem = 1% of the scene width. The scene is a 16:10 box that always covers the screen. */
+  html { font-size: calc(max(100vw, 160vh) / 100); }
   * { box-sizing: border-box; margin: 0; }
-  html, body {
-    height: 100%; overflow: hidden;
-    background: #0b0a09; color: var(--ink);
+  html, body { height: 100%; overflow: hidden; background: #2a140a; }
+  body {
+    color: #fff3e4;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
-    -webkit-font-smoothing: antialiased;
+    font-size: 1rem; -webkit-font-smoothing: antialiased;
   }
-  body.light { background: #e9e4d9; --ink: #1b1814; }
   body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
-  body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
+  body:not(.white-vinyl) { --v: #14100d; --groove: rgba(255,255,255,.035); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.08); }
 
-  .bg {
-    position: fixed; inset: -14%; background-size: cover; background-position: center;
-    filter: blur(90px) saturate(1.2) brightness(.42);
-    opacity: 0; transition: opacity 1.4s ease;
-  }
-  .bg.on { opacity: 1; }
-  body.dark .bg, body.light .bg { display: none; }
-  .vignette {
-    position: fixed; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 40% 50%, transparent 25%, rgba(0,0,0,.6) 100%);
-  }
-  body.light .vignette { display: none; }
+  .scene { position: fixed; left: 50%; top: 50%; width: 100rem; height: 62.5rem; transform: translate(-50%, -50%); }
+  .scene > * { position: absolute; }
 
-  /* Small clock (while playing) and big clock (when idle) */
-  .clock {
-    position: fixed; top: 4vh; left: 3vw; z-index: 2;
-    font-size: clamp(14px, 1.3vw, 24px); font-weight: 500; letter-spacing: .01em; opacity: .5;
-    transition: opacity 1.2s ease;
+  /* ---------- Room ---------- */
+  .wall {
+    left: 0; top: 0; width: 100%; height: 33.6rem;
+    background:
+      radial-gradient(60rem 30rem at 12% 35%, rgba(255,196,150,.38), transparent 70%),
+      radial-gradient(40rem 34rem at 91% 70%, rgba(255,172,96,.5), transparent 70%),
+      linear-gradient(180deg, #9a6249 0%, #b07a5a 45%, #a3694b 100%);
   }
-  .big {
-    position: fixed; inset: 0; z-index: 3; pointer-events: none;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 1.2s ease;
+  .desk {
+    left: 0; top: 33.6rem; width: 100%; height: 40rem;
+    background:
+      radial-gradient(45rem 16rem at 90% 0%, rgba(255,150,70,.5), transparent 70%),
+      radial-gradient(30rem 12rem at 10% 4%, rgba(255,150,80,.28), transparent 70%),
+      repeating-linear-gradient(180deg, rgba(0,0,0,.07) 0 .12rem, transparent .12rem .9rem),
+      linear-gradient(180deg, #7a3a1a 0%, #5a2a12 18%, #3c1c0b 100%);
+    box-shadow: inset 0 .15rem 0 rgba(255,190,130,.35);
   }
-  .bigtime {
-    font-size: clamp(80px, 22vw, 420px); font-weight: 200; line-height: 1;
-    letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  .vig {
+    left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(0,0,0,.45) 100%);
   }
-  .bigdate { margin-top: 2vh; font-size: clamp(16px, 2vw, 36px); font-weight: 400; opacity: .5; }
+
+  /* Painting */
+  .frame {
+    left: 47.5rem; top: -3rem; width: 27.7rem; height: 17.3rem; background: #3a2313;
+    box-shadow: 0 0 4rem rgba(255,140,70,.5), inset 0 0 0 .2rem rgba(255,255,255,.06);
+  }
+  .mat { position: absolute; inset: .8rem; background: #cdb9a3; box-shadow: inset 0 0 .6rem rgba(0,0,0,.25); }
+  .paint {
+    position: absolute; inset: 2.4rem 3rem;
+    background:
+      radial-gradient(circle at 28% 38%, #8d6a6e 0 7%, transparent 8%),
+      radial-gradient(circle at 40% 25%, #9a7a74 0 6%, transparent 7%),
+      radial-gradient(circle at 18% 60%, #5d6a60 0 8%, transparent 9%),
+      radial-gradient(circle at 72% 66%, #a39a55 0 8%, transparent 9%),
+      radial-gradient(circle at 82% 52%, #8e8a4a 0 6%, transparent 7%),
+      radial-gradient(circle at 60% 40%, #5a4b58 0 10%, transparent 11%),
+      #16130f;
+  }
+
+  /* Lamp */
+  .halo { left: 70rem; top: 8rem; width: 40rem; height: 40rem;
+    background: radial-gradient(circle, rgba(255,190,110,.32), transparent 65%); }
+  .shade {
+    left: 84.5rem; top: 16.6rem; width: 12.2rem; height: 16rem; border-radius: 6.1rem 6.1rem 1rem 1rem;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.2) 0 .12rem, transparent .12rem .8rem),
+      radial-gradient(ellipse at 50% 72%, #fff8e6 0, #ffd9a2 28%, #f0b076 62%, #d4965f 100%);
+    box-shadow: 0 0 7rem rgba(255,170,90,.65);
+  }
+  .bulb { position: absolute; left: 33%; top: 45%; width: 34%; height: 40%; border-radius: 50% 50% 40% 40%;
+    background: radial-gradient(ellipse at 50% 55%, #fffdf5, #ffe8bf 70%, transparent 100%); filter: blur(.25rem); }
+  .neck { left: 89.2rem; top: 32.4rem; width: 2.4rem; height: 4rem;
+    background: linear-gradient(90deg, #6d4e1e, #d7b25f 45%, #5e4318); }
+  .lbase { left: 86.2rem; top: 36rem; width: 8rem; height: 2.6rem; border-radius: 50% 50% 10% 10% / 90% 90% 10% 10%;
+    background: linear-gradient(90deg, #6d4e1e, #d7b25f 45%, #5e4318); box-shadow: 0 .8rem 1.4rem rgba(0,0,0,.5); }
+
+  /* ---------- Album on its ledge ---------- */
+  .cover {
+    left: 6.1rem; top: 22.5rem; width: 24rem; height: 23.6rem; background: #17120f center / cover no-repeat;
+    transform: rotate(-3deg); transform-origin: bottom left;
+    box-shadow: 1rem 1.4rem 3rem rgba(0,0,0,.55);
+  }
+  .cover::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.1), transparent 40%); }
+  .cover.in { animation: coverIn .9s ease; }
+  @keyframes coverIn { from { opacity: 0; } to { opacity: 1; } }
+  .ledge {
+    left: 6.8rem; top: 45.4rem; width: 25.3rem; height: 2.3rem;
+    background: linear-gradient(#b08c52, #6e4d24); box-shadow: 0 1rem 1.6rem rgba(0,0,0,.5), inset 0 .12rem 0 rgba(255,255,255,.25);
+  }
+
+  /* Track info on the desk below the album */
+  .info { left: 6.4rem; top: 51.2rem; width: 25rem; transition: opacity .5s ease; }
+  .info.hidden { opacity: 0; }
+  .title { font-size: 1.7rem; font-weight: 600; line-height: 1.15; letter-spacing: -.012em; }
+  .artist { margin-top: .5rem; font-size: 1.15rem; opacity: .65; }
+  .bar { margin-top: 1.6rem; height: .1rem; background: rgba(255,243,228,.2); }
+  .bar i { display: block; height: 100%; background: #fff3e4; opacity: .85;
+    transform-origin: left; transform: scaleX(0); transition: transform 1s linear; }
+
+  /* Lyrics on the wall */
+  .lyrics {
+    left: 5rem; top: 2.5rem; width: 41rem; height: 18.5rem; overflow: hidden;
+    -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+            mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+    transition: opacity 1s ease;
+  }
+  .lyricList { position: absolute; left: 0; right: 0; top: 0;
+    transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform; }
+  .ll {
+    font-size: 1.9rem; font-weight: 600; line-height: 1.22; letter-spacing: -.012em;
+    padding: .55rem 0; opacity: .3; transform: scale(.9); transform-origin: left center;
+    text-shadow: 0 0 1rem rgba(70,25,5,.55);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .ll.near { opacity: .5; }
+  .ll.on { opacity: 1; transform: scale(1); }
+
+  /* Clocks */
+  .clock { right: 3.2rem; top: 4.2rem; font-size: 1.5rem; font-weight: 500; opacity: .75;
+    text-shadow: 0 0 1rem rgba(70,25,5,.5); transition: opacity 1.2s ease; }
+  .big { left: 5rem; top: 3rem; opacity: 0; pointer-events: none; transition: opacity 1.2s ease;
+    text-shadow: 0 0 2rem rgba(70,25,5,.45); }
+  .bigtime { font-size: 10rem; font-weight: 200; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .bigdate { margin-top: 1rem; font-size: 2rem; opacity: .75; }
   body.idle .big { opacity: 1; }
-  body.idle .clock { opacity: 0; }
+  body.idle .clock, body.idle .lyrics, body.idle .info { opacity: 0; }
 
-  .stage {
-    position: relative; z-index: 1; height: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 4vw;
-    transition: opacity 1.2s ease;
+  /* ---------- Record stack (your recently played albums) ---------- */
+  .stack { left: 69rem; top: 38rem; width: 30rem; height: 16rem; perspective: 70rem; }
+  .sl {
+    position: absolute; width: 18rem; height: 18rem; background: #3a2c25 center / cover no-repeat;
+    border-bottom: .3rem solid rgba(0,0,0,.45); border-right: .2rem solid rgba(0,0,0,.35);
+    transform-origin: 50% 100%; box-shadow: .6rem 1.2rem 2rem rgba(0,0,0,.5);
   }
-  body.idle .stage { opacity: 0; }
+  .s0 { left: 5.5rem; top: -2rem; transform: rotateX(58deg) rotateZ(-7deg); }
+  .s1 { left: 3.4rem; top: -1.4rem; background-color: #4a3a30; transform: rotateX(58deg) rotateZ(-4deg); }
+  .s2 { left: 1.4rem; top: -.8rem; background-color: #2c221c; transform: rotateX(58deg) rotateZ(-1deg); }
 
   /* ---------- Turntable ---------- */
-  .deck {
-    position: relative; flex: none; width: calc(var(--h) * 1.3); height: var(--h);
-    border-radius: calc(var(--h) * .035);
+  .tt { left: 34rem; top: 34rem; width: 33.6rem; height: 14.1rem; }
+  .tt > * { position: absolute; }
+  .ttshadow { left: 1rem; top: 9rem; width: 32rem; height: 6rem; background: rgba(0,0,0,.55); filter: blur(1.6rem); }
+  .plate {
+    left: 0; top: 0; width: 100%; height: 10.5rem;
+    clip-path: polygon(4.2% 0, 95.8% 0, 100% 100%, 0 100%);
     background:
-      repeating-linear-gradient(92deg, rgba(255,255,255,.02) 0 1px, transparent 1px 5px,
-        rgba(0,0,0,.06) 5px 6px, transparent 6px 13px),
-      linear-gradient(160deg, #3b2b1f, #251912 55%, #1a110b);
-    box-shadow: 0 5vh 9vh rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.55),
-      inset 0 1px 0 rgba(255,255,255,.12), inset 0 -2px 0 rgba(0,0,0,.45);
+      linear-gradient(180deg, rgba(255,255,255,.35), transparent 8%),
+      linear-gradient(#e8e1d4, #d3cab9);
   }
-  .platter {
-    position: absolute; left: calc(var(--h) * .05); top: calc(var(--h) * .05);
-    width: calc(var(--h) * .9); height: calc(var(--h) * .9); border-radius: 50%;
-    background: conic-gradient(#8c8882, #4d4a45, #a09c95, #44413d, #8c8882);
-    box-shadow: 0 .8vh 2vh rgba(0,0,0,.6), inset 0 0 0 calc(var(--h) * .006) rgba(0,0,0,.5);
+  .front {
+    left: 0; top: 10.5rem; width: 100%; height: 3.6rem; border-radius: 0 0 .5rem .5rem;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,.04) 0 .1rem, transparent .1rem .6rem),
+      linear-gradient(#5b3e29, #3b2617);
+    box-shadow: inset 0 .15rem 0 rgba(255,255,255,.15);
   }
-  .disc {
-    position: absolute; left: calc(var(--h) * .07); top: calc(var(--h) * .07);
-    width: calc(var(--h) * .86); height: calc(var(--h) * .86);
+  .pside {
+    left: 1.1rem; top: -.3rem; width: 22.6rem; height: 9.27rem; border-radius: 50%;
+    background: #b7b2a8;
+    box-shadow: 0 .35rem 0 #8b877f, 0 .7rem 0 #c4bfb5, 0 1.05rem 0 #7e7a72,
+                0 1.4rem 0 #b0aba1, 0 1.75rem 0 #6f6b64, 0 2.6rem 2rem rgba(0,0,0,.45);
   }
+  .ptop { left: 1.5rem; top: -6.6rem; width: 21.8rem; height: 21.8rem; transform: scaleY(.41); }
   .record {
     position: absolute; inset: 0; border-radius: 50%;
     background:
@@ -86,141 +174,65 @@
         var(--gap) 64% 64.5%, transparent 64.5% 76%,
         var(--gap) 76% 76.5%, transparent 76.5% 88%,
         var(--gap) 88% 88.5%, transparent 88.5%),
-      repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
+      repeating-radial-gradient(circle closest-side, var(--groove) 0 .1rem, transparent .1rem .4rem),
       var(--v);
-    box-shadow: inset 0 0 0 calc(var(--h) * .004) var(--lip), 0 .4vh 1.2vh rgba(0,0,0,.5);
+    box-shadow: inset 0 0 0 .3rem var(--lip);
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
   body.playing .record { animation-play-state: running; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .label {
-    position: absolute; inset: 32%; border-radius: 50%;
-    background: #5b5047 center / cover no-repeat;
-    box-shadow: inset 0 0 0 .3vmin rgba(0,0,0,.3), 0 0 0 .5vmin rgba(0,0,0,.4);
-    transition: background-image .6s;
+    position: absolute; inset: 32%; border-radius: 50%; background: #5b5047 center / cover no-repeat;
+    box-shadow: inset 0 0 0 .2rem rgba(0,0,0,.3), 0 0 0 .3rem rgba(0,0,0,.4);
   }
-  .hole { position: absolute; inset: 48.8%; border-radius: 50%; background: #0b0a09;
-    box-shadow: 0 0 0 .2vmin rgba(255,255,255,.12); }
+  .hole { position: absolute; inset: 48.8%; border-radius: 50%; background: #14100d; }
   .sheen {
-    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
-    background: conic-gradient(from 30deg,
-      transparent 0 4%, rgba(255,255,255,.13) 10%, transparent 18% 54%,
-      rgba(255,255,255,.08) 60%, transparent 68%);
-    mix-blend-mode: screen;
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none; mix-blend-mode: screen;
+    background: conic-gradient(from 30deg, transparent 0 4%, rgba(255,235,210,.16) 10%, transparent 18% 54%,
+      rgba(255,235,210,.1) 60%, transparent 68%);
     -webkit-mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
             mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
   }
 
-  /* Tonearm: pivot sits top right of the deck. Tune the two rotate() angles if the needle lands off. */
-  .armwrap { position: absolute; left: calc(var(--h) * 1.12); top: calc(var(--h) * .2); width: 0; height: 0; }
-  .base {
-    position: absolute; width: calc(var(--h) * .11); height: calc(var(--h) * .11);
-    left: calc(var(--h) * -.055); top: calc(var(--h) * -.055); border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #7b766e, #2a2724 70%);
-    box-shadow: 0 .7vh 1.6vh rgba(0,0,0,.55), inset 0 0 0 calc(var(--h) * .004) rgba(255,255,255,.12);
+  .pbase {
+    left: 27rem; top: -1.3rem; width: 2.8rem; height: 3.4rem; border-radius: 1rem 1rem .8rem .8rem / .9rem .9rem .6rem .6rem;
+    background: linear-gradient(90deg, #1a1816, #47423d 50%, #141210); box-shadow: 0 .8rem 1rem rgba(0,0,0,.4);
   }
   .arm {
-    position: absolute; right: 0; top: calc(var(--h) * -.0065);
-    width: calc(var(--h) * .386); height: calc(var(--h) * .013); border-radius: 99px;
-    background: linear-gradient(#e6e1d6, #8f8b83);
-    box-shadow: 0 .7vh 1.4vh rgba(0,0,0,.5);
-    transform-origin: 100% 50%;
-    transform: rotate(-67deg);                       /* resting: needle off the record */
+    left: 28.4rem; top: .2rem; width: 0; height: 0; z-index: 4;
+    transform: rotate(132deg);                           /* resting: needle off the record */
     transition: transform 1.8s cubic-bezier(.45, .05, .25, 1);
   }
-  body.playing .arm { transform: rotate(-10.5deg); } /* playing: needle on the grooves */
-  .arm::before { /* headshell */
-    content: ""; position: absolute; left: calc(var(--h) * -.06); top: calc(var(--h) * -.0125);
-    width: calc(var(--h) * .075); height: calc(var(--h) * .038);
-    background: linear-gradient(#2c2926, #12100e); border-radius: calc(var(--h) * .006);
-    transform: rotate(14deg); transform-origin: right center;
-  }
-  .arm::after { /* counterweight */
-    content: ""; position: absolute; right: calc(var(--h) * -.075); top: calc(var(--h) * -.0125);
-    width: calc(var(--h) * .07); height: calc(var(--h) * .038);
-    background: linear-gradient(#4a4642, #1c1a18); border-radius: calc(var(--h) * .01);
-  }
-  .cap {
-    position: absolute; width: calc(var(--h) * .05); height: calc(var(--h) * .05);
-    left: calc(var(--h) * -.025); top: calc(var(--h) * -.025); border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #d9d4c9, #6c685f 75%);
-    box-shadow: 0 .3vh .8vh rgba(0,0,0,.5);
-  }
+  body.playing .arm { transform: rotate(156deg); }       /* playing: needle on the grooves */
+  .arm > * { position: absolute; }
+  .tube { left: 0; top: -.2rem; width: 12.3rem; height: .4rem; border-radius: 1rem;
+    background: linear-gradient(#f0ebe0, #8b877f); box-shadow: 0 .5rem .6rem rgba(0,0,0,.3); }
+  .cw { left: -3.1rem; top: -.8rem; width: 2.9rem; height: 1.6rem; border-radius: .5rem;
+    background: linear-gradient(#8c8882, #45423e); }
+  .head { left: 11.7rem; top: -.75rem; width: 1.8rem; height: 1.5rem; border-radius: .25rem;
+    background: linear-gradient(#b96a2c, #6b3a15); }
+  .knob { left: 29.2rem; top: 7.9rem; width: 1.4rem; height: 1.4rem; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f0d796, #8a6a2c 75%); box-shadow: 0 .3rem .6rem rgba(0,0,0,.4); }
+  .led { left: 26.9rem; top: 9rem; width: .5rem; height: .5rem; border-radius: 50%; background: #2a1d17;
+    transition: background .4s, box-shadow .4s; }
+  body.playing .led { background: #ff8a4d; box-shadow: 0 0 1rem #ff8a4d; }
 
-  /* Controls */
-  .knob {
-    position: absolute; left: calc(var(--h) * 1.055); top: calc(var(--h) * .675);
-    width: calc(var(--h) * .13); height: calc(var(--h) * .13); border-radius: 50%;
-    background: conic-gradient(#b9b4aa, #6d6962, #c9c4ba, #5f5b55, #b9b4aa);
-    box-shadow: 0 .6vh 1.4vh rgba(0,0,0,.55), inset 0 0 0 calc(var(--h) * .005) rgba(0,0,0,.35);
-    transition: transform 1.2s cubic-bezier(.4, 0, .2, 1);
-  }
-  .knob::after {
-    content: ""; position: absolute; left: 47.5%; top: 9%; width: 5%; height: 26%;
-    border-radius: 2px; background: #1a1816;
-  }
-  body.playing .knob { transform: rotate(55deg); }
-  .led {
-    position: absolute; left: calc(var(--h) * 1.108); top: calc(var(--h) * .588);
-    width: calc(var(--h) * .024); height: calc(var(--h) * .024); border-radius: 50%;
-    background: #3a1512; transition: background .4s, box-shadow .4s;
-  }
-  body.playing .led { background: #ff6a45; box-shadow: 0 0 1.6vh #ff6a45; }
-  .spd {
-    position: absolute; top: calc(var(--h) * .8675);
-    width: calc(var(--h) * .065); height: calc(var(--h) * .065); border-radius: 50%;
-    background: linear-gradient(#3d3a36, #1c1a18); color: #8d877c;
-    font-size: calc(var(--h) * .024); font-weight: 600;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 .4vh 1vh rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
-  }
-  .spd.a { left: calc(var(--h) * 1.0175); color: #ffb86b; }
-  .spd.b { left: calc(var(--h) * 1.1575); }
-
-  /* ---------- Right column ---------- */
-  .side {
-    width: 26vw; height: var(--h);
-    display: flex; flex-direction: column; justify-content: space-between;
-  }
-  .lyrics {
-    flex: 1; position: relative; overflow: hidden;
-    -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
-            mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
-  }
-  .lyricList {
-    position: absolute; left: 0; right: 0; top: 0; padding-right: 1vw;
-    transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform;
-  }
-  .ll {
-    font-size: clamp(17px, 1.9vw, 36px); font-weight: 600; line-height: 1.22; letter-spacing: -.012em;
-    padding: 1.1vh 0; opacity: .2; transform: scale(.9); transform-origin: left center;
-    transition: opacity .6s ease, transform .6s ease;
-  }
-  .ll.near { opacity: .38; }
-  .ll.on { opacity: 1; transform: scale(1); }
-
-  .info { margin-bottom: 1vh; transition: opacity .5s ease; }
-  .info.hidden { opacity: 0; }
-  .title { font-size: clamp(16px, 1.7vw, 32px); font-weight: 500; line-height: 1.15; letter-spacing: -.015em; }
-  .artist { margin-top: .8vh; font-size: clamp(12px, 1.1vw, 20px); opacity: .55; }
-  .bar { margin-top: 3vh; height: 1px; background: color-mix(in srgb, var(--ink) 18%, transparent); }
-  .bar i { display: block; height: 100%; background: var(--ink); opacity: .8;
-    transform-origin: left; transform: scaleX(0); transition: transform 1s linear; }
-
-  /* Login + setup states */
+  /* ---------- Login + setup ---------- */
   #connect {
-    display: none; font: inherit; font-size: 18px; font-weight: 500;
-    padding: 12px 26px; border-radius: 999px; border: 0;
-    background: var(--ink); color: #0b0a09; cursor: pointer;
+    display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
+    font: inherit; font-size: 1.4rem; font-weight: 600; padding: .9rem 2rem; border-radius: 99px; border: 0;
+    background: #fff3e4; color: #2a140a; cursor: pointer;
   }
   body.needs-login #connect { display: block; }
-  body.needs-login .side, body.setup .side, body.needs-login .deck, body.setup .deck { display: none; }
+  body.needs-login .lyrics, body.needs-login .info, body.setup .lyrics, body.setup .info { display: none; }
   body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
   body.needs-login #connect { cursor: pointer; }
-
-  #transfer { display: none; max-width: 34vw; font-size: 16px; line-height: 1.5; }
+  #transfer {
+    display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
+    width: min(560px, 80vw); padding: 20px; border-radius: 14px; background: rgba(20,10,5,.9);
+    font-size: 16px; line-height: 1.5;
+  }
   body.setup #transfer { display: block; }
   #transfer textarea {
     width: 100%; height: 150px; margin-top: 10px; padding: 10px; border-radius: 8px;
@@ -231,61 +243,63 @@
 </style>
 </head>
 <body>
-  <div class="bg" id="bg0"></div>
-  <div class="bg" id="bg1"></div>
-  <div class="vignette"></div>
+<div class="scene">
+  <div class="wall"></div>
+  <div class="desk"></div>
+  <div class="vig"></div>
+
+  <div class="frame"><div class="mat"><div class="paint"></div></div></div>
+  <div class="halo"></div>
+  <div class="shade"><div class="bulb"></div></div>
+  <div class="neck"></div>
+  <div class="lbase"></div>
+
   <div class="clock" id="clock"></div>
   <div class="big"><div class="bigtime" id="bigTime"></div><div class="bigdate" id="bigDate"></div></div>
+  <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
 
-  <div class="stage">
-    <div class="deck">
-      <div class="platter"></div>
-      <div class="disc">
-        <div class="record">
-          <div class="label" id="label"></div>
-          <div class="hole"></div>
-        </div>
-        <div class="sheen"></div>
-      </div>
-
-      <div class="led"></div>
-      <div class="knob"></div>
-      <div class="spd a">33</div>
-      <div class="spd b">45</div>
-
-      <div class="armwrap">
-        <div class="base"></div>
-        <div class="arm"></div>
-        <div class="cap"></div>
-      </div>
-    </div>
-
-    <div class="side">
-      <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
-      <div class="info hidden" id="info">
-        <div class="title" id="title"></div>
-        <div class="artist" id="artist"></div>
-        <div class="bar"><i id="fill"></i></div>
-      </div>
-    </div>
-
-    <button id="connect">Connect Spotify</button>
-    <div id="transfer">
-      Connected. Copy this whole link and paste it as the website URL in Plash.
-      <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
-    </div>
+  <div class="cover" id="cover"></div>
+  <div class="ledge"></div>
+  <div class="info hidden" id="info">
+    <div class="title" id="title"></div>
+    <div class="artist" id="artist"></div>
+    <div class="bar"><i id="fill"></i></div>
   </div>
+
+  <div class="stack" id="stack"><div class="sl s2"></div><div class="sl s1"></div><div class="sl s0"></div></div>
+
+  <div class="tt">
+    <div class="ttshadow"></div>
+    <div class="plate"></div>
+    <div class="front"></div>
+    <div class="pside"></div>
+    <div class="ptop">
+      <div class="record"><div class="label" id="label"></div><div class="hole"></div></div>
+      <div class="sheen"></div>
+    </div>
+    <div class="pbase"></div>
+    <div class="knob"></div>
+    <div class="led"></div>
+    <div class="arm"><div class="cw"></div><div class="tube"></div><div class="head"></div></div>
+  </div>
+</div>
+
+<button id="connect">Connect Spotify</button>
+<div id="transfer">
+  Connected. Copy this whole link and paste it as the website URL in Plash.
+  <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
+</div>
 
 <script>
 // ---------- CONFIG ----------
 const CONFIG = {
   CLIENT_ID: '7accde9c16c942b0b671362deca8a31a',
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
-  BACKGROUND: 'art',     // 'art' (blurred album art) | 'dark' | 'light'
   SHOW_PROGRESS: true,   // thin progress line under the track
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   LYRICS_OFFSET: 0.3,    // seconds; raise if lyrics feel late, lower if early
-  SHOW_CLOCK: true,      // small clock, top left
+  SHOW_CLOCK: true,      // small clock, top right
+  SHOW_STACK: true,      // pile of recently played albums on the right
   IDLE_CLOCK: true,      // big clock when music is paused or stopped
   IDLE_SECONDS: 10,      // how long music must be stopped before the big clock appears
   CENSOR: true,          // replace explicit words with ***
@@ -303,19 +317,19 @@ const LS = {
   del: k => localStorage.removeItem(k)
 };
 
-document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 if (!CONFIG.SHOW_PROGRESS) document.querySelector('.bar').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
+if (!CONFIG.SHOW_STACK) $('stack').style.display = 'none';
 
 // ---------- Censoring ----------
 const CONTAINS = ['fuck', 'shit'];
 const WORDS = ['bitch', 'bastard', 'asshole', 'dick', 'cock', 'pussy', 'cunt', 'whore', 'slut',
-  'piss', 'ass', 'jackass', 'dumbass', 'badass','nigga','nigger'];
+  'piss', 'ass', 'jackass', 'dumbass', 'badass', 'nigga', 'niggas', 'nigger'];
 const censorRe = new RegExp(
   '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
-const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '***') : t);
 
 // ---------- Clocks ----------
 function updateClock() {
@@ -440,9 +454,9 @@ function applyVinyl(rgb) {
   if (!rgb) { ['--v', '--groove', '--gap', '--lip'].forEach(k => s.removeProperty(k)); return; }
   const [r, g, b] = rgb.map(v => Math.round(v * .45));
   s.setProperty('--v', `rgb(${r},${g},${b})`);
-  s.setProperty('--groove', 'rgba(255,255,255,.035)');
+  s.setProperty('--groove', 'rgba(255,255,255,.04)');
   s.setProperty('--gap', 'rgba(0,0,0,.5)');
-  s.setProperty('--lip', 'rgba(255,255,255,.09)');
+  s.setProperty('--lip', 'rgba(255,255,255,.1)');
 }
 
 // ---------- Lyrics (LRCLIB, synced, scrolling list) ----------
@@ -523,17 +537,33 @@ setInterval(lyricTick, 250);
 window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
 // ---------- Rendering ----------
-let lastArt = null, layer = 0;
+let lastArt = null;
+const albumHistory = [];
 const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
+
+function renderStack() {
+  ['s0', 's1', 's2'].forEach((c, i) => {
+    const el = document.querySelector('.' + c);
+    el.style.backgroundImage = albumHistory[i] ? `url(${albumHistory[i]})` : 'none';
+  });
+}
 
 function setArt(url) {
   if (url === lastArt) return;
+  if (lastArt) {
+    const j = albumHistory.indexOf(lastArt);
+    if (j > -1) albumHistory.splice(j, 1);
+    albumHistory.unshift(lastArt);
+  }
+  const k = albumHistory.indexOf(url);
+  if (k > -1) albumHistory.splice(k, 1);
+  albumHistory.length = Math.min(albumHistory.length, 3);
   lastArt = url;
-  const layers = [$('bg0'), $('bg1')];
-  layer ^= 1;
-  layers[layer].style.backgroundImage = url ? `url(${url})` : 'none';
-  layers[layer].classList.add('on');
-  layers[layer ^ 1].classList.remove('on');
+  renderStack();
+
+  const cover = $('cover');
+  cover.style.backgroundImage = url ? `url(${url})` : 'none';
+  cover.classList.remove('in'); void cover.offsetWidth; cover.classList.add('in');
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
   if (CONFIG.VINYL === 'art') {
     if (url) extractColor(url).then(c => { if (lastArt === url) applyVinyl(c); });
