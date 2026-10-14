@@ -6,7 +6,7 @@
 <title>Vinyl Wallpaper</title>
 <style>
   :root {
-    --r: min(68vh, 38vw);      /* record size: everything scales from this */
+    --r: min(64vh, 34vw);      /* record size: everything scales from this */
     --ink: #efe9de;
     --clock-top: #fff;
     --glow: 140,120,110;       /* overwritten from the album art */
@@ -56,7 +56,7 @@
     transition: opacity 1.2s ease;
   }
 
-  /* Big idle clock */
+  /* Big idle clock: the digits are dead center, everything else hangs below */
   .big {
     position: fixed; inset: 0; z-index: 3; pointer-events: none;
     display: flex; align-items: center; justify-content: center;
@@ -67,30 +67,37 @@
   body.idle .clock { opacity: 0; }
 
   .bigwrap {
-    display: flex; flex-direction: column; align-items: center;
-    animation: sway 45s ease-in-out infinite alternate; /* slow drift, avoids burn-in */
+    animation: sway 45s ease-in-out infinite alternate; /* tiny drift, avoids burn-in */
   }
   @keyframes sway {
-    from { transform: translate(-1.5vw, -1.5vh); }
-    to   { transform: translate(1.5vw, 1.5vh); }
+    from { transform: translate(-.6vw, -.6vh); }
+    to   { transform: translate(.6vw, .6vh); }
+  }
+  .timerow {
+    position: relative; display: inline-block;
+    font-size: clamp(80px, 22vw, 420px); line-height: 1;
   }
   .bigtime {
-    display: flex; align-items: baseline;
-    font-size: clamp(80px, 22vw, 420px); font-weight: 200; line-height: 1;
-    letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+    display: block; white-space: nowrap; text-align: center;
+    font-weight: 200; letter-spacing: -.04em; font-variant-numeric: tabular-nums;
     background: linear-gradient(180deg, var(--clock-top) 25%, rgb(var(--glow)) 135%);
     -webkit-background-clip: text; background-clip: text;
     color: transparent; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 0 3vh rgba(var(--glow), .45));
   }
-  .bigtime .colon { animation: blink 2s ease-in-out infinite; padding: 0 .02em; }
-  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
-  .bigtime .ampm {
-    font-size: .16em; font-weight: 400; letter-spacing: .02em;
-    margin-left: .25em; opacity: .7;
+  .bigtime .colon { margin: 0 .02em; } /* no animation/opacity here: breaks gradient text in WebKit */
+  .ampm {
+    position: absolute; left: 100%; bottom: .14em; margin-left: .06em;
+    font-size: .16em; font-weight: 400; letter-spacing: .02em; opacity: .7; white-space: nowrap;
+  }
+  .bigmeta {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    width: max-content; padding-top: 2vh;
+    display: flex; flex-direction: column; align-items: center;
+    font-size: 16px; line-height: normal; /* reset from .timerow */
   }
   .bigdate {
-    margin-top: 2vh; font-size: clamp(14px, 1.6vw, 30px); font-weight: 400;
+    font-size: clamp(14px, 1.6vw, 30px); font-weight: 400;
     letter-spacing: .22em; text-transform: uppercase; opacity: .55;
   }
   .bigsec {
@@ -108,6 +115,7 @@
     font-size: clamp(13px, 1.2vw, 22px); opacity: 0; transition: opacity 1s ease;
   }
   .bigtrack.has { opacity: .6; }
+  #bigTrackName { max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bigart {
     width: 5vh; height: 5vh; border-radius: 50%; flex: none;
     background: #3a322c center / cover no-repeat;
@@ -117,7 +125,7 @@
 
   .stage {
     position: relative; z-index: 1; width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center; gap: 7vw;
+    display: flex; align-items: center; justify-content: center; gap: 5vw;
     transition: opacity 1.2s ease;
   }
   body.idle .stage { opacity: 0; }
@@ -213,8 +221,15 @@
 
   /* ---------- Right column ---------- */
   .side {
-    flex: none; width: 32vw; height: var(--r);
+    position: relative; flex: none; width: 44vw; height: 78vh;
+    padding-left: 2.6vw;
     display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .side::before { /* glowing accent line */
+    content: ""; position: absolute; left: 0; top: 6%; bottom: 6%; width: 2px; border-radius: 2px;
+    background: linear-gradient(transparent, rgba(var(--glow), .9) 25%, rgba(var(--glow), .9) 75%, transparent);
+    box-shadow: 0 0 2vh rgba(var(--glow), .6);
+    opacity: .75;
   }
   .lyrics {
     flex: 1; position: relative; overflow: hidden;
@@ -226,17 +241,44 @@
     transition: transform .85s cubic-bezier(.3, .7, .2, 1); will-change: transform;
   }
   .ll {
-    font-size: clamp(17px, 1.9vw, 36px); font-weight: 600; line-height: 1.22; letter-spacing: -.012em;
-    padding: 1.1vh 0; opacity: .2; transform: scale(.9); transform-origin: left center;
-    transition: opacity .6s ease, transform .6s ease;
+    font-size: clamp(22px, 2.7vw, 56px); font-weight: 600; line-height: 1.16; letter-spacing: -.018em;
+    padding: 1.4vh 0; opacity: .2; transform: scale(.9); transform-origin: left center;
+    filter: blur(3px);
+    transition: opacity .6s ease, transform .6s ease, filter .6s ease, text-shadow .6s ease;
   }
-  .ll.near { opacity: .38; }
-  .ll.on { opacity: 1; transform: scale(1); }
+  .ll.near { opacity: .4; filter: blur(1.2px); }
+  .ll.on {
+    opacity: 1; transform: scale(1); filter: none;
+    text-shadow: 0 0 3vh rgba(var(--glow), .55);
+  }
 
   .info { margin-top: 2vh; transition: opacity .5s ease; }
   .info.hidden { opacity: 0; }
-  .title { font-size: clamp(16px, 1.7vw, 32px); font-weight: 500; line-height: 1.15; letter-spacing: -.015em; }
-  .artist { margin-top: .8vh; font-size: clamp(12px, 1.1vw, 20px); opacity: .55; }
+  .eyebrow {
+    display: flex; align-items: center; gap: 1vw; opacity: .65;
+    font-size: clamp(11px, .95vw, 18px); font-weight: 600; letter-spacing: .28em; text-transform: uppercase;
+  }
+  .eq { display: flex; align-items: flex-end; gap: max(2px, .24vw); height: 2.2vh; }
+  .eq i {
+    display: block; width: max(2px, .26vw); height: 25%; border-radius: 2px;
+    background: rgb(var(--glow)); box-shadow: 0 0 1vh rgba(var(--glow), .8);
+    animation: eq 1s ease-in-out infinite; animation-play-state: paused;
+  }
+  .eq i:nth-child(2) { animation-duration: .75s; animation-delay: -.3s; }
+  .eq i:nth-child(3) { animation-duration: 1.15s; animation-delay: -.6s; }
+  .eq i:nth-child(4) { animation-duration: .9s; animation-delay: -.15s; }
+  body.playing .eq i { animation-play-state: running; }
+  @keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+
+  .title {
+    margin-top: 1.6vh;
+    font-size: clamp(24px, 3vw, 58px); font-weight: 600; line-height: 1.08; letter-spacing: -.025em;
+  }
+  .artist { margin-top: 1vh; font-size: clamp(15px, 1.55vw, 30px); opacity: .6; }
+  .times {
+    margin-top: 2vh; font-size: clamp(12px, 1.05vw, 20px); opacity: .45;
+    font-variant-numeric: tabular-nums; letter-spacing: .06em;
+  }
 
   /* Login + setup states */
   #connect {
@@ -259,7 +301,7 @@
   @media (prefers-reduced-motion: reduce) {
     .record { animation-duration: 12s; }
     .tilt, .floor, .glow { animation: none; }
-    .aurora, .bigwrap, .bigtime .colon, .bigart { animation: none; }
+    .aurora, .bigwrap, .bigart, .eq i { animation: none; }
   }
 </style>
 </head>
@@ -271,12 +313,17 @@
   <div class="clock" id="clock"></div>
   <div class="big">
     <div class="bigwrap">
-      <div class="bigtime" id="bigTime"></div>
-      <div class="bigdate" id="bigDate"></div>
-      <div class="bigsec"><i id="bigSec"></i></div>
-      <div class="bigtrack" id="bigTrack">
-        <div class="bigart" id="bigArt"></div>
-        <div id="bigTrackName"></div>
+      <div class="timerow">
+        <div class="bigtime" id="bigTime"></div>
+        <div class="ampm" id="bigAmpm"></div>
+        <div class="bigmeta">
+          <div class="bigdate" id="bigDate"></div>
+          <div class="bigsec"><i id="bigSec"></i></div>
+          <div class="bigtrack" id="bigTrack">
+            <div class="bigart" id="bigArt"></div>
+            <div id="bigTrackName"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -303,8 +350,13 @@
     <div class="side">
       <div class="lyrics" id="lyrics"><div class="lyricList" id="lyricList"></div></div>
       <div class="info hidden" id="info">
+        <div class="eyebrow">
+          <div class="eq"><i></i><i></i><i></i><i></i></div>
+          <span id="eyebrowText">Now playing</span>
+        </div>
         <div class="title" id="title"></div>
         <div class="artist" id="artist"></div>
+        <div class="times"><span id="tNow">0:00</span> / <span id="tTot">0:00</span></div>
       </div>
     </div>
 
@@ -362,12 +414,16 @@ function updateClock() {
   const now = new Date();
   const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   $('clock').textContent = time;
-  if (time !== lastTime) { // only rebuild when the minute changes, so the colon keeps pulsing
+  if (time !== lastTime) {
     lastTime = time;
     const m = time.match(/^(\d+)\D+(\d{2})\s*(.*)$/);
-    $('bigTime').innerHTML = m
-      ? `${m[1]}<span class="colon">:</span>${m[2]}` + (m[3] ? `<span class="ampm">${m[3]}</span>` : '')
-      : time;
+    if (m) {
+      $('bigTime').innerHTML = `${m[1]}<span class="colon">:</span>${m[2]}`;
+      $('bigAmpm').textContent = m[3];
+    } else {
+      $('bigTime').textContent = time;
+      $('bigAmpm').textContent = '';
+    }
   }
   $('bigDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
   const s = now.getSeconds(), bar = $('bigSec');
@@ -646,6 +702,7 @@ function render(data) {
 
   setArt(art);
   document.body.classList.toggle('playing', cur.playing);
+  $('eyebrowText').textContent = cur.playing ? 'Now playing' : 'Paused';
   setIdle(!cur.playing); // paused counts as idle too
 
   if (changed) {
@@ -670,9 +727,16 @@ function render(data) {
   }
 }
 
+const fmtTime = ms => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+};
+
 function tick() {
   const p = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
   $('ringFill').style.strokeDashoffset = String(1 - Math.min(1, p / cur.duration));
+  $('tNow').textContent = fmtTime(Math.min(p, cur.duration));
+  $('tTot').textContent = fmtTime(cur.duration);
 }
 setInterval(tick, 1000);
 
