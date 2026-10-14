@@ -452,7 +452,7 @@ const CONFIG = {
   IDLE_SECONDS: 10,      // how long music must be stopped before the idle screen appears
   CENSOR: true,          // replace explicit words with *
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
-  POLL_MS: 1000,         // how often to check Spotify while music is playing
+  POLL_MS: 3000,         // how often to check Spotify while music is playing
   IDLE_POLL_MS: 5000     // how often to check while idle (lower = less energy, slower wake-up)
 };
 // ----------------------------
@@ -933,7 +933,7 @@ async function poll() {
         LS.set('expires_at', '0');
         setStatus('401: token rejected, retrying');
       } else if (r.status === 429) {
-        delay = (Number(r.headers.get('Retry-After')) || 10) * 1000;
+        delay = Math.max((Number(r.headers.get('Retry-After')) || 0) * 1000, 30000);
         setStatus('429: rate limited, waiting ' + Math.round(delay / 1000) + 's');
       } else {
         let body = '';
