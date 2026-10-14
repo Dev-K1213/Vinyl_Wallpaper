@@ -29,18 +29,17 @@
   .bg.on { opacity: 1; }
   body:not(.playing) .bg.on { opacity: .3; } /* dim the tint while paused */
   body.dark .bg, body.light .bg { display: none; }
+
+  /* Vignette + film grain in ONE static layer under the content (was two full-screen layers on top) */
   .vignette {
     position: fixed; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at 35% 50%, transparent 30%, rgba(0,0,0,.55) 100%);
+    background:
+      radial-gradient(ellipse at 35% 50%, transparent 30%, rgba(0,0,0,.55) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .036 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: auto, 220px 220px;
   }
+  body.no-grain .vignette { background: radial-gradient(ellipse at 35% 50%, transparent 30%, rgba(0,0,0,.55) 100%); }
   body.light .vignette { display: none; }
-
-  /* Fine film grain over everything: richer gradients, no banding */
-  .grain {
-    position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: .06;
-    background-size: 220px 220px;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  }
 
   /* ---------- Neon sign (artist name, top center) ---------- */
   .neon {
@@ -86,6 +85,7 @@
   .qrow { display: flex; align-items: flex-start; gap: 1.1vw; }
   .qitem {
     --sz: 10vh; --rot: 0deg; --qo: 1;
+    position: relative;
     width: var(--sz); height: var(--sz); margin-top: calc(var(--sz) * -.34);
     border-radius: 1vh; background: #3a322c center / cover no-repeat;
     box-shadow: 0 0 0 1px rgba(255,255,255,.12), 0 1vh 2.6vh rgba(0,0,0,.55);
@@ -97,11 +97,13 @@
   .qitem:nth-child(2) { --sz: 9vh;   --rot: 1.5deg; --qo: .85; }
   .qitem:nth-child(3) { --sz: 7.5vh; --rot: -1deg;  --qo: .7; }
   .qitem:nth-child(4) { --sz: 6.2vh; --rot: 2deg;   --qo: .55; }
-  .shelf.soon .qitem:nth-child(1) { animation: qdrop .9s cubic-bezier(.2, .9, .2, 1) forwards, qsoon 1.8s ease-in-out infinite; }
-  @keyframes qsoon {
-    0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 1vh 2.6vh rgba(0,0,0,.55), 0 0 3.4vh rgba(var(--glow), .5); }
-    50%      { box-shadow: 0 0 0 1px rgba(var(--glow), .6), 0 1vh 2.6vh rgba(0,0,0,.55), 0 0 6.5vh rgba(var(--glow), .9); }
+  /* "Next song soon" pulse: fades a pre-drawn glow in and out (opacity only, no repainting) */
+  .qitem:nth-child(1)::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+    box-shadow: 0 0 0 1px rgba(var(--glow), .6), 0 0 6.5vh rgba(var(--glow), .9);
   }
+  .shelf.soon .qitem:nth-child(1)::after { animation: qsoon 1.8s ease-in-out infinite; }
+  @keyframes qsoon { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
   .qinfo { margin-top: 1.3vh; text-align: right; max-width: 22vw; }
   .qlabel {
     font-size: clamp(9px, .75vw, 14px); font-weight: 600; letter-spacing: .26em;
@@ -195,7 +197,11 @@
     50%      { transform: rotateX(16deg) rotateY(-12deg) translateY(-1.6vh); }
   }
 
-  /* Thin progress ring around the record */
+  /* Pause the hover/hum animations when music isn't playing; FLOAT: false turns the hover off entirely */
+  body:not(.playing) .tilt, body:not(.playing) .floor, body:not(.playing) .neontext { animation-play-state: paused; }
+  body.no-float .tilt, body.no-float .floor { animation: none; }
+
+  /* Thin progress ring around the record: no filters, updated once a second */
   .ring {
     position: absolute; inset: -6%; width: 112%; height: 112%;
     overflow: visible; transform: rotate(-90deg);
@@ -203,12 +209,15 @@
   .ring circle { fill: none; }
   .ring .track { stroke: rgba(255,255,255,.14); stroke-width: .3; }
   body.light .ring .track { stroke: rgba(0,0,0,.15); }
+  #ringGlow { /* soft halo: a wider, faint copy of the arc (replaces the old drop-shadow filter) */
+    stroke: rgb(var(--glow)); stroke-width: 1.8; stroke-opacity: .22;
+    stroke-dasharray: 1 2; stroke-dashoffset: 1;
+  }
   #ringFill {
     stroke: var(--ink); stroke-width: .45; stroke-opacity: .9;
     stroke-dasharray: 1 2; stroke-dashoffset: 1;
-    transition: stroke-dashoffset 1s linear;
-    filter: drop-shadow(0 0 .5vh rgba(var(--glow), .9));
   }
+  body.smooth-ring #ringFill, body.smooth-ring #ringGlow { transition: stroke-dashoffset 1s linear; }
 
   .disc { position: absolute; inset: 0; }
   .record {
@@ -227,7 +236,18 @@
     animation: spin 1.8s linear infinite; /* 33 1/3 rpm */
     animation-play-state: paused;
   }
-  body.playing .record { animation-play-state: running; }
+  /* Sheen sits between the grooves and the label, so it needs no blend mode or mask */
+  .sheen {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(from 30deg,
+      transparent 0 4%, rgba(255,255,255,.14) 10%, transparent 18% 54%,
+      rgba(255,255,255,.09) 60%, transparent 68%);
+  }
+  .labelspin { /* label + spindle hole spin in sync with the grooves */
+    position: absolute; inset: 0; border-radius: 50%;
+    animation: spin 1.8s linear infinite; animation-play-state: paused;
+  }
+  body.playing .record, body.playing .labelspin { animation-play-state: running; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .label {
@@ -238,15 +258,6 @@
   }
   .hole { position: absolute; inset: 48.8%; border-radius: 50%; background: #0b0a09;
     box-shadow: 0 0 0 .2vmin rgba(255,255,255,.12); }
-  .sheen {
-    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
-    background: conic-gradient(from 30deg,
-      transparent 0 4%, rgba(255,255,255,.14) 10%, transparent 18% 54%,
-      rgba(255,255,255,.09) 60%, transparent 68%);
-    mix-blend-mode: screen;
-    -webkit-mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
-            mask: radial-gradient(circle closest-side, transparent 0 37%, #000 38%);
-  }
 
   /* ---------- Right column ---------- */
   .side {
@@ -298,16 +309,17 @@
     font-size: clamp(11px, .95vw, 18px); font-weight: 600; letter-spacing: .28em; text-transform: uppercase;
   }
   .eq { display: flex; align-items: flex-end; gap: max(2px, .24vw); height: 2.2vh; }
-  .eq i {
-    display: block; width: max(2px, .26vw); height: 25%; border-radius: 2px;
+  .eq i { /* bars scale with transform (no layout or repaint per frame) */
+    display: block; width: max(2px, .26vw); height: 100%; border-radius: 2px;
     background: rgb(var(--glow)); box-shadow: 0 0 1vh rgba(var(--glow), .8);
+    transform-origin: bottom; transform: scaleY(.25);
     animation: eq 1s ease-in-out infinite; animation-play-state: paused;
   }
   .eq i:nth-child(2) { animation-duration: .75s; animation-delay: -.3s; }
   .eq i:nth-child(3) { animation-duration: 1.15s; animation-delay: -.6s; }
   .eq i:nth-child(4) { animation-duration: .9s; animation-delay: -.15s; }
   body.playing .eq i { animation-play-state: running; }
-  @keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+  @keyframes eq { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
 
   .title {
     margin-top: 1.6vh;
@@ -339,8 +351,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .record { animation-duration: 12s; }
-    .tilt, .floor, .glow, .eq i, .neontext, .neon.boot { animation: none; }
+    .record, .labelspin { animation-duration: 12s; }
+    .tilt, .floor, .glow, .eq i, .neontext, .neon.boot, .shelf.soon .qitem:nth-child(1)::after { animation: none; }
     .qitem { animation: none; opacity: var(--qo); transform: rotate(var(--rot)); }
   }
 </style>
@@ -377,14 +389,16 @@
       <div class="tilt">
         <svg class="ring" id="ring" viewBox="0 0 100 100" aria-hidden="true">
           <circle class="track" cx="50" cy="50" r="48"></circle>
+          <circle id="ringGlow" cx="50" cy="50" r="48" pathLength="1"></circle>
           <circle id="ringFill" cx="50" cy="50" r="48" pathLength="1"></circle>
         </svg>
         <div class="disc">
-          <div class="record">
+          <div class="record"></div>
+          <div class="sheen"></div>
+          <div class="labelspin">
             <div class="label" id="label"></div>
             <div class="hole"></div>
           </div>
-          <div class="sheen"></div>
         </div>
       </div>
     </div>
@@ -413,8 +427,6 @@
     </div>
   </div>
 
-  <div class="grain"></div>
-
 <script>
 // ---------- CONFIG ----------
 const CONFIG = {
@@ -422,18 +434,20 @@ const CONFIG = {
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
   BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark' | 'light'
   SHOW_PROGRESS: true,   // thin progress ring around the record
+  SMOOTH_RING: false,    // true = ring glides continuously (looks smoother, uses more energy)
   SHOW_LYRICS: true,     // synced lyrics from LRCLIB (when the song has them)
   SHOW_NEXT: true,       // queue shelf at the top right
   SHOW_NEON: true,       // neon artist sign at the top
+  FLOAT: true,           // record hovers and tilts gently (false = still, saves a bit more energy)
   LYRICS_OFFSET: 0.05,   // seconds; raise if lyrics feel late, lower if early
-  GRAIN: true,           // fine film grain over everything
+  GRAIN: true,           // fine film grain in the background
   IDLE_SCREEN: true,     // static clock + last album when music is paused or stopped
   IDLE_TRACK: true,      // show the last played track under the idle clock
   IDLE_SECONDS: 10,      // how long music must be stopped before the idle screen appears
   CENSOR: true,          // replace explicit words with *
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
   POLL_MS: 1000,         // how often to check Spotify while music is playing
-  IDLE_POLL_MS: 3000     // how often to check while idle (lower = less energy, slower wake-up)
+  IDLE_POLL_MS: 5000     // how often to check while idle (lower = less energy, slower wake-up)
 };
 // ----------------------------
 
@@ -448,9 +462,11 @@ const LS = {
 
 document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
+document.body.classList.toggle('smooth-ring', !!CONFIG.SMOOTH_RING);
+document.body.classList.toggle('no-float', CONFIG.FLOAT === false);
+document.body.classList.toggle('no-grain', !CONFIG.GRAIN);
 if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
-if (!CONFIG.GRAIN) document.querySelector('.grain').style.display = 'none';
 if (CONFIG.SHOW_NEXT === false) $('shelf').style.display = 'none';
 if (CONFIG.SHOW_NEON === false) $('neon').style.display = 'none';
 
@@ -478,13 +494,11 @@ function setNeon(raw) {
 // ---------- Timers (stopped while idle so nothing wakes the CPU) ----------
 let tickTimer = null, lyricTimer = null;
 function startTimers() {
-  if (tickTimer) return;
-  tickTimer = setInterval(tick, 1000);
-  lyricTimer = setInterval(lyricTick, 250);
+  if (!tickTimer) tickTimer = setInterval(tick, 1000);
 }
 function stopTimers() {
-  clearInterval(tickTimer); clearInterval(lyricTimer);
-  tickTimer = lyricTimer = null;
+  clearInterval(tickTimer); tickTimer = null;
+  clearTimeout(lyricTimer); lyricTimer = null;
 }
 
 // ---------- Idle screen (static: clock + last album, text updated once a minute) ----------
@@ -701,15 +715,18 @@ function buildList() {
   focusLine(-1, true);
 }
 
+// Event-driven: wakes up exactly when the next line starts (re-synced on every Spotify check)
 function lyricTick() {
-  if (!CONFIG.SHOW_LYRICS || !lyrics.length) return;
+  clearTimeout(lyricTimer); lyricTimer = null;
+  if (!CONFIG.SHOW_LYRICS || !lyrics.length || idleOn) return;
   const ms = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
   const p = ms / 1000 + CONFIG.LYRICS_OFFSET;
   let i = -1;
   for (let k = 0; k < lyrics.length && lyrics[k].t <= p; k++) i = k;
-  if (i === lyricIdx) return;
-  lyricIdx = i;
-  focusLine(i, false);
+  if (i !== lyricIdx) { lyricIdx = i; focusLine(i, false); }
+  if (cur.playing && lyrics[i + 1]) {
+    lyricTimer = setTimeout(lyricTick, Math.max(40, (lyrics[i + 1].t - p) * 1000));
+  }
 }
 window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
@@ -755,6 +772,7 @@ setInterval(() => { if (cur.playing) fetchNext(); }, 30000);
 // ---------- Rendering ----------
 let lastArt = null, layer = 0;
 const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
+const ringEls = [$('ringFill'), $('ringGlow')];
 
 function setBackground(url, rgb) {
   const layers = [$('bg0'), $('bg1')];
@@ -826,7 +844,7 @@ function render(data) {
 
   if (changed) {
     $('info').classList.add('hidden');
-    $('ringFill').style.transition = 'none';
+    ringEls.forEach(e => { e.style.transition = 'none'; });
     setTimeout(() => {
       $('title').textContent = censor(item.name);
       $('artist').textContent = censor(artist);
@@ -834,7 +852,7 @@ function render(data) {
       $('info').classList.remove('hidden');
     }, $('title').textContent ? 350 : 0);
     tick();
-    requestAnimationFrame(() => requestAnimationFrame(() => { $('ringFill').style.transition = ''; }));
+    requestAnimationFrame(() => requestAnimationFrame(() => { ringEls.forEach(e => { e.style.transition = ''; }); }));
 
     setTimeout(fetchNext, 1500); // queue updates a moment after the track changes
 
@@ -853,6 +871,7 @@ function render(data) {
   } else {
     $('info').classList.remove('hidden');
   }
+  lyricTick(); // re-sync the lyric timer with the fresh progress
 }
 
 const fmtTime = ms => {
@@ -862,7 +881,8 @@ const fmtTime = ms => {
 
 function tick() {
   const p = cur.playing ? cur.progress + (performance.now() - cur.stamp) : cur.progress;
-  $('ringFill').style.strokeDashoffset = String(1 - Math.min(1, p / cur.duration));
+  const off = String(1 - Math.min(1, p / cur.duration));
+  ringEls.forEach(e => { e.style.strokeDashoffset = off; });
   $('tNow').textContent = fmtTime(Math.min(p, cur.duration));
   $('tTot').textContent = fmtTime(cur.duration);
 
