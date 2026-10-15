@@ -114,8 +114,8 @@
   .qtitle { margin-top: .5vh; font-size: clamp(14px, 1.2vw, 23px); font-weight: 600; letter-spacing: -.012em; }
   .qartist { margin-top: .2vh; font-size: clamp(11px, .95vw, 18px); opacity: .55; }
 
-  /* ---------- Idle screen: fully static, near-zero energy ----------
-     No canvas, no animations, no filters. The only work is updating the clock text once a minute. */
+  /* ---------- Idle screen: a static record shelf, near-zero energy ----------
+     No canvas, no animations, no filters. The only work is updating the small clock once a minute. */
   .idlelayer {
     position: fixed; inset: 0; z-index: 4; pointer-events: none;
     display: flex; align-items: center; justify-content: center;
@@ -123,27 +123,76 @@
     transition: opacity 2s ease, visibility 0s linear 2s;
   }
   body.idle .idlelayer { opacity: 1; visibility: visible; transition: opacity 2s ease; }
-  .idlebox { display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .idleart {
-    position: relative; width: 20vmin; height: 20vmin; border-radius: 50%;
-    background: #3a322c center / cover no-repeat; opacity: .6;
-    box-shadow: 0 0 0 .4vmin rgba(0,0,0,.55), 0 0 0 .6vmin rgba(255,255,255,.08),
-      0 0 6vmin rgba(var(--glow), .4);
+
+  .idleclock { position: absolute; top: 4.5vh; right: 3.2vw; text-align: right; }
+  .idletime { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .idledate { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; opacity: .42; }
+  .idlelayer.alone .idleclock { top: 50%; right: 50%; transform: translate(50%, -50%); text-align: center; }
+  .idlelayer.alone .idletime { font-size: 15vmin; font-weight: 200; letter-spacing: -.04em; }
+  .idlelayer.alone .idledate { font-size: 2.6vmin; }
+
+  .idlebox { display: flex; flex-direction: column; align-items: center; gap: 7vmin; }
+  .idlemain { display: flex; align-items: center; gap: 7vmin; }
+  .idlecover { position: relative; flex: none; width: 64vmin; height: 44vmin; }
+  .idlesleeve {
+    position: absolute; left: 0; top: 0; z-index: 1; width: 44vmin; height: 44vmin;
+    border-radius: .8vmin; background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 2vmin 6vmin rgba(0,0,0,.6), 0 0 9vmin rgba(var(--glow), .35);
   }
-  .idleart::after { /* spindle hole */
-    content: ""; position: absolute; inset: 47%; border-radius: 50%;
-    background: #0b0a09; box-shadow: 0 0 0 .25vmin rgba(255,255,255,.15);
+  .idlevinyl { /* the record peeking out of the sleeve */
+    position: absolute; left: 22vmin; top: 1vmin; width: 42vmin; height: 42vmin; border-radius: 50%;
+    background:
+      radial-gradient(circle closest-side,
+        transparent 0 38%, var(--gap) 38% 39%, transparent 39% 52%,
+        var(--gap) 52% 52.5%, transparent 52.5% 64%,
+        var(--gap) 64% 64.5%, transparent 64.5% 76%,
+        var(--gap) 76% 76.5%, transparent 76.5% 88%,
+        var(--gap) 88% 88.5%, transparent 88.5%),
+      repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
+      var(--v);
+    box-shadow: inset 0 0 0 .3vmin var(--lip), 0 .6vmin 2.4vmin rgba(0,0,0,.55);
   }
-  .idletime {
-    margin-top: 5vmin; font-size: 17vmin; font-weight: 200; line-height: 1;
-    letter-spacing: -.04em; font-variant-numeric: tabular-nums;
+  .idlevinyl::before { /* static sheen */
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 30deg,
+      transparent 0 4%, rgba(255,255,255,.14) 10%, transparent 18% 54%,
+      rgba(255,255,255,.09) 60%, transparent 68%);
   }
-  .idledate { margin-top: 2vmin; font-size: 2.6vmin; font-weight: 400; letter-spacing: .08em; opacity: .5; }
-  .idletrack {
-    margin-top: 5vmin; max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: clamp(13px, 1.25vw, 24px); font-weight: 500; letter-spacing: .06em; opacity: 0;
+  .idlelabel {
+    position: absolute; inset: 32%; border-radius: 50%;
+    background: #5b5047 center / cover no-repeat;
+    box-shadow: inset 0 0 0 .3vmin rgba(0,0,0,.3), 0 0 0 .4vmin rgba(0,0,0,.4);
   }
-  .idletrack.has { opacity: .45; }
+  .idlelabel::after { /* spindle hole */
+    content: ""; position: absolute; inset: 43%; border-radius: 50%;
+    background: #0b0a09; box-shadow: 0 0 0 .2vmin rgba(255,255,255,.15);
+  }
+
+  .idletext { max-width: 32vw; }
+  .idleeyebrow { font-size: 1.8vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .5; }
+  .idletitle {
+    margin-top: 2vmin; font-size: 5.6vmin; font-weight: 600; line-height: 1.06; letter-spacing: -.025em;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .idleartist { margin-top: 1.6vmin; font-size: 3vmin; opacity: .6; }
+  .idlealbum { margin-top: 1vmin; font-size: 2.2vmin; opacity: .38; }
+  .idlenote { margin-top: 3.4vmin; font-size: 2vmin; letter-spacing: .04em; color: rgb(var(--glow)); opacity: .85; }
+  .idlenote:empty { display: none; }
+
+  .idlehistwrap { display: flex; flex-direction: column; align-items: center; gap: 2vmin; }
+  .idlehistcap { font-size: 1.6vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .35; }
+  .idlehist { display: flex; gap: 2.4vmin; }
+  .idlehist i {
+    display: block; width: 10vmin; height: 10vmin; border-radius: 1.2vmin;
+    background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 .8vmin 2vmin rgba(0,0,0,.5);
+  }
+  .idlehist i:nth-child(1) { opacity: .8; }
+  .idlehist i:nth-child(2) { opacity: .7; }
+  .idlehist i:nth-child(3) { opacity: .6; }
+  .idlehist i:nth-child(4) { opacity: .5; }
+  .idlehist i:nth-child(5) { opacity: .42; }
+  .idlehist i:nth-child(6) { opacity: .35; }
 
   /* While idle, hide the main scene for real (not just transparent) and freeze its animations */
   body.idle .stage, body.idle .neon, body.idle .shelf {
@@ -368,12 +417,29 @@
   <div class="bg" id="bg1"></div>
   <div class="vignette"></div>
 
-  <div class="idlelayer">
-    <div class="idlebox">
-      <div class="idleart" id="idleArt"></div>
+  <div class="idlelayer" id="idleLayer">
+    <div class="idleclock">
       <div class="idletime" id="idleTime"></div>
       <div class="idledate" id="idleDate"></div>
-      <div class="idletrack" id="idleTrack"></div>
+    </div>
+    <div class="idlebox">
+      <div class="idlemain" id="idleMain">
+        <div class="idlecover">
+          <div class="idlevinyl"><div class="idlelabel" id="idleLabel"></div></div>
+          <div class="idlesleeve" id="idleSleeve"></div>
+        </div>
+        <div class="idletext" id="idleText">
+          <div class="idleeyebrow">Last played</div>
+          <div class="idletitle" id="idleTitle"></div>
+          <div class="idleartist" id="idleArtist"></div>
+          <div class="idlealbum" id="idleAlbum"></div>
+          <div class="idlenote" id="idleNote"></div>
+        </div>
+      </div>
+      <div class="idlehistwrap" id="idleHistWrap">
+        <div class="idlehistcap">Recently played</div>
+        <div class="idlehist" id="idleHist"></div>
+      </div>
     </div>
   </div>
 
@@ -475,6 +541,7 @@ if (!CONFIG.SHOW_PROGRESS) $('ring').style.display = 'none';
 if (!CONFIG.SHOW_LYRICS) $('lyrics').style.display = 'none';
 if (CONFIG.SHOW_NEXT === false) $('shelf').style.display = 'none';
 if (CONFIG.SHOW_NEON === false) $('neon').style.display = 'none';
+if (!CONFIG.IDLE_TRACK) $('idleText').style.display = 'none';
 
 // ---------- Censoring ----------
 const CONTAINS = ['nigga', 'nigger'];
@@ -507,7 +574,36 @@ function stopTimers() {
   clearTimeout(lyricTimer); lyricTimer = null;
 }
 
-// ---------- Idle screen (static: clock + last album, text updated once a minute) ----------
+// ---------- Play history (saved in this page's local storage, drives the idle screen) ----------
+let hist = [];
+try { hist = JSON.parse(LS.get('history') || '[]'); } catch (e) { hist = []; }
+const bgUrl = u => u ? `url('${u}')` : 'none';
+
+function paintIdle() {
+  const h = hist[0];
+  $('idleLayer').classList.toggle('alone', !h);
+  $('idleMain').style.display = h ? '' : 'none';
+  if (h) {
+    $('idleSleeve').style.backgroundImage = bgUrl(h.art);
+    $('idleLabel').style.backgroundImage = bgUrl(h.art);
+    $('idleTitle').textContent = censor(h.name);
+    $('idleArtist').textContent = censor(h.artist);
+    $('idleAlbum').textContent = censor(h.album) + (h.year ? ' \u00B7 ' + h.year : '');
+  }
+  const prev = hist.slice(1, 7);
+  $('idleHistWrap').style.display = prev.length ? '' : 'none';
+  $('idleHist').innerHTML = prev.map(p => `<i style="background-image:${bgUrl(p.thumb || p.art)}"></i>`).join('');
+}
+
+function recordHist(h) {
+  hist = hist.filter(x => x.id !== h.id && (!h.art || x.art !== h.art)); // one entry per album
+  hist.unshift(h);
+  hist = hist.slice(0, 8);
+  try { LS.set('history', JSON.stringify(hist)); } catch (e) {}
+  paintIdle();
+}
+
+// ---------- Idle screen (static: last album + history, clock text updated once a minute) ----------
 let idleTimer = null, idleOn = false, clockTimer = null;
 
 function updateIdleClock() {
@@ -813,7 +909,6 @@ function setArt(url) {
   if (url === lastArt) return;
   lastArt = url;
   $('label').style.backgroundImage = url ? `url(${url})` : 'none';
-  $('idleArt').style.backgroundImage = url ? `url(${url})` : 'none';
   (url ? extractColor(url) : Promise.resolve(null)).then(c => {
     if (lastArt !== url) return;
     const glow = applyGlow(c);
@@ -832,8 +927,9 @@ function render(data) {
     setIdle(true);
     return;
   }
-  const art = (item.album && item.album.images && item.album.images[0] && item.album.images[0].url)
-    || (item.images && item.images[0] && item.images[0].url) || null;
+  const imgs = (item.album && item.album.images) || item.images || [];
+  const art = (imgs[0] && imgs[0].url) || null;
+  const thumb = (imgs[1] && imgs[1].url) || art;
   const artist = item.artists ? item.artists.map(a => a.name).join(', ')
     : (item.show && item.show.name) || '';
   const mainArtist = item.artists && item.artists[0] ? item.artists[0].name
@@ -842,12 +938,6 @@ function render(data) {
   const year = item.album && item.album.release_date ? item.album.release_date.slice(0, 4) : '';
 
   setNeon(mainArtist);
-
-  // Keep the last track under the idle clock after pause/stop
-  if (CONFIG.IDLE_TRACK) {
-    $('idleTrack').textContent = censor(item.name) + ' \u2014 ' + censor(artist);
-    $('idleTrack').classList.add('has');
-  }
 
   const changed = item.id !== cur.id;
   cur.id = item.id;
@@ -862,6 +952,8 @@ function render(data) {
   setIdle(!cur.playing); // paused counts as idle too
 
   if (changed) {
+    recordHist({ id: item.id, art: art || '', thumb: thumb || '', name: item.name, artist: artist, album: albumName, year: year });
+
     $('info').classList.add('hidden');
     ringEls.forEach(e => { e.style.transition = 'none'; });
     setTimeout(() => {
@@ -923,14 +1015,22 @@ function setStatus(msg) {
 }
 const untilText = () => new Date(blockedUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
+// Rate limited: show the idle screen with a note until the lockout ends
+function enterLockout() {
+  $('idleNote').textContent = 'Spotify is cooling down \u00B7 back around ' + untilText();
+  setStatus('');
+  setIdle(true);
+}
+
 async function poll() {
   let delay = CONFIG.POLL_MS;
   try {
     if (isBlocked()) {
-      // still locked out: don't touch Spotify at all, the page keeps running from the last known state
+      // still locked out: don't touch Spotify at all, the page sits on the idle screen
       delay = blockedUntil - Date.now() + 500;
-      setStatus('Spotify rate limit: paused until ' + untilText());
+      enterLockout();
     } else {
+      $('idleNote').textContent = '';
       const token = await getToken();
       if (!token) {
         document.body.classList.add('needs-login');
@@ -957,7 +1057,7 @@ async function poll() {
         } else if (r.status === 429) {
           backoff();
           delay = blockedUntil - Date.now() + 500;
-          setStatus('429: Spotify rate limit. Paused until ' + untilText());
+          enterLockout();
         } else {
           let body = '';
           try { body = (await r.text()).slice(0, 160); } catch (e) {}
@@ -983,6 +1083,8 @@ if (hashRt) {
 }
 
 $('connect').addEventListener('click', login);
+paintIdle();
+if (hist[0] && hist[0].art) setArt(hist[0].art); // restore colors from the last album so a reload isn't blank
 startTimers();
 handleRedirect().then(poll);
 </script>
