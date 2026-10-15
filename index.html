@@ -452,7 +452,7 @@ const CONFIG = {
   IDLE_SECONDS: 10,      // how long music must be stopped before the idle screen appears
   CENSOR: true,          // replace explicit words with *
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
-  POLL_MS: 3000,         // how often to check Spotify while music is playing
+  POLL_MS: 6000,         // how often to check Spotify while music is playing
   IDLE_POLL_MS: 5000     // how often to check while idle (lower = less energy, slower wake-up)
 };
 // ----------------------------
@@ -736,6 +736,18 @@ function lyricTick() {
 }
 window.addEventListener('resize', () => focusLine(lyricIdx, true));
 
+// ---------- Rate-limit guard (shared by every Spotify call, survives reloads) ----------
+let blockedUntil = Number(LS.get('blocked_until') || 0);
+let rlStep = Number(LS.get('rl_step') || 0);
+const isBlocked = () => Date.now() < blockedUntil;
+function backoff() { // Retry-After is hidden from browser JS, so back off on our own: 1, 2, 4, 8, 15 min
+  rlStep = Math.min(rlStep + 1, 5);
+  blockedUntil = Date.now() + Math.min(60000 * Math.pow(2, rlStep - 1), 15 * 60000);
+  LS.set('blocked_until', String(blockedUntil));
+  LS.set('rl_step', String(rlStep));
+}
+function clearBackoff() { if (rlStep) { rlStep = 0; LS.set('rl_step', '0'); } }
+
 // ---------- Queue shelf (next songs from the Spotify queue) ----------
 let shelfKey = '';
 function showNext(list) {
@@ -762,18 +774,19 @@ function showNext(list) {
 }
 
 async function fetchNext() {
-  if (CONFIG.SHOW_NEXT === false) return;
+  if (CONFIG.SHOW_NEXT === false || isBlocked() || idleOn) return;
   try {
     const token = await getToken();
     if (!token) return;
     const r = await fetch('https://api.spotify.com/v1/me/player/queue',
       { headers: { Authorization: 'Bearer ' + token } });
-    if (!r.ok) return; // rate limited or unavailable: keep what's showing
+    if (r.status === 429) { backoff(); return; }
+    if (!r.ok) return;
     const d = await r.json();
     showNext((d.queue || []).slice(0, 4));
   } catch (e) { /* offline: try again later */ }
 }
-setInterval(() => { if (cur.playing) fetchNext(); }, 30000);
+setInterval(() => { if (cur.playing) fetchNext(); }, 60000);
 
 // ---------- Rendering ----------
 let lastArt = null, layer = 0;
@@ -902,50 +915,55 @@ function tick() {
 }
 
 // ---------- Polling ----------
-let rlStep = 0; // consecutive 429 responses
-
 function setStatus(msg) {
   const s = $('status');
   if (!msg) { s.classList.remove('show'); return; }
   s.textContent = msg;
   s.classList.add('show');
 }
+const untilText = () => new Date(blockedUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
 async function poll() {
   let delay = CONFIG.POLL_MS;
   try {
-    const token = await getToken();
-    if (!token) {
-      document.body.classList.add('needs-login');
-      document.body.classList.remove('playing');
-      setIdle(false);
-      setStatus('No token: click Connect Spotify');
+    if (isBlocked()) {
+      // still locked out: don't touch Spotify at all, the page keeps running from the last known state
+      delay = blockedUntil - Date.now() + 500;
+      setStatus('Spotify rate limit: paused until ' + untilText());
     } else {
-      const r = await fetch(
-        'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
-        { headers: { Authorization: 'Bearer ' + token } }
-      );
-      if (r.status === 200) {
-        rlStep = 0;
-        setStatus('');
-        render(await r.json());
-      } else if (r.status === 204) {
-        rlStep = 0;
-        setStatus('');
-        render(null);
-      } else if (r.status === 401) {
-        LS.set('expires_at', '0');
-        setStatus('401: token rejected, retrying');
-      } else if (r.status === 429) {
-        const ra = r.headers.get('Retry-After');
-        rlStep = Math.min(rlStep + 1, 5);
-        delay = Math.max((Number(ra) || 0) * 1000, 30000 * rlStep);
-        setStatus('429: waiting ' + Math.round(delay / 1000) + 's (Retry-After: ' + (ra === null ? 'not readable' : ra) + ')');
+      const token = await getToken();
+      if (!token) {
+        document.body.classList.add('needs-login');
+        document.body.classList.remove('playing');
+        setIdle(false);
+        setStatus('No token: click Connect Spotify');
       } else {
-        let body = '';
-        try { body = (await r.text()).slice(0, 160); } catch (e) {}
-        setStatus('Spotify returned ' + r.status + ' ' + body);
-        delay = Math.max(delay, 10000);
+        const r = await fetch(
+          'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
+          { headers: { Authorization: 'Bearer ' + token } }
+        );
+        if (r.status === 200) {
+          clearBackoff(); setStatus('');
+          render(await r.json());
+          if (cur.playing) { // wake right as the song ends, so polling can be slow
+            const rem = cur.duration - cur.progress - (performance.now() - cur.stamp);
+            if (rem > 0 && rem + 800 < delay) delay = Math.max(1000, rem + 800);
+          }
+        } else if (r.status === 204) {
+          clearBackoff(); setStatus(''); render(null);
+        } else if (r.status === 401) {
+          LS.set('expires_at', '0');
+          setStatus('401: token rejected, retrying');
+        } else if (r.status === 429) {
+          backoff();
+          delay = blockedUntil - Date.now() + 500;
+          setStatus('429: Spotify rate limit. Paused until ' + untilText());
+        } else {
+          let body = '';
+          try { body = (await r.text()).slice(0, 160); } catch (e) {}
+          setStatus('Spotify returned ' + r.status + ' ' + body);
+          delay = Math.max(delay, 10000);
+        }
       }
     }
   } catch (e) {
