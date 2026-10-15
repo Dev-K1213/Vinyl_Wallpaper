@@ -1048,23 +1048,27 @@ const untilText = () => new Date(blockedUntil).toLocaleTimeString([], { hour: 'n
 
 // Rate limited: show the idle screen with a note until the lockout ends
 function enterLockout() {
+  const why = LS.get('rl_src') || '';
   $('idleNote').textContent = 'Spotify is cooling down \u00B7 back around ' + untilText();
-  setStatus('');
+  setStatus('Spotify cooling down until ' + untilText() + (why ? ' (' + why + ')' : ''));
   setIdle(true);
 }
 
+let lastPoll = 'waiting for first check';
+
 async function poll() {
-  if (setupMode) return; // showing the link: leave Spotify alone
+  if (setupMode) { lastPoll = 'paused: this tab is showing the link box'; return; }
   let delay = CONFIG.POLL_MS;
   try {
     if (isBlocked()) {
-      // still locked out: don't touch Spotify at all, the page sits on the idle screen
+      lastPoll = 'blocked, not calling Spotify until ' + untilText();
       delay = blockedUntil - Date.now() + 500;
       enterLockout();
     } else {
       $('idleNote').textContent = '';
       const token = await getToken();
       if (!token) {
+        lastPoll = 'no login saved';
         document.body.classList.add('needs-login');
         document.body.classList.remove('playing');
         setIdle(false);
@@ -1074,6 +1078,7 @@ async function poll() {
           'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
           { headers: { Authorization: 'Bearer ' + token } }
         );
+        lastPoll = 'HTTP ' + r.status + ' at ' + new Date().toLocaleTimeString();
         if (r.status === 200) {
           clearBackoff(); setStatus('');
           render(await r.json());
@@ -1087,7 +1092,9 @@ async function poll() {
           LS.set('expires_at', '0');
           setStatus('401: token rejected, retrying');
         } else if (r.status === 429) {
-          LS.set('rl_src', 'now-playing');
+          let why = '';
+          try { why = (await r.text()).slice(0, 120); } catch (e) {}
+          LS.set('rl_src', 'now-playing ' + why);
           backoff();
           delay = blockedUntil - Date.now() + 500;
           enterLockout();
@@ -1100,6 +1107,7 @@ async function poll() {
       }
     }
   } catch (e) {
+    lastPoll = 'error: ' + (e && e.message ? e.message : e);
     setStatus('Error: ' + (e && e.message ? e.message : e));
   }
   if (idleOn) delay = Math.max(delay, CONFIG.IDLE_POLL_MS); // check less often while idle
@@ -1126,10 +1134,12 @@ if (new URLSearchParams(location.search).has('debug')) {
   document.body.appendChild(d);
   const upd = () => {
     const b = Number(LS.get('blocked_until') || 0);
-  d.textContent = 'redirect ' + REDIRECT + '\nclient ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
+    d.textContent = 'redirect ' + REDIRECT + '\n' +
+      'client ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
       'login ' + (LS.get('refresh_token') ? 'saved' : 'none') + '\n' +
       'blocked ' + (b > Date.now() ? 'until ' + new Date(b).toLocaleTimeString() : 'no') +
-      ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')';
+      ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')\n' +
+      'last poll ' + lastPoll;
   };
   upd(); setInterval(upd, 2000);
 }
