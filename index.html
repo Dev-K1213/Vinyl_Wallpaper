@@ -537,13 +537,13 @@ const LS = {
   const p = new URLSearchParams(location.search);
   const forced = p.has('reset');
   if (forced || LS.get('client_id') !== CONFIG.CLIENT_ID) {
-    ['access_token', 'refresh_token', 'expires_at', 'blocked_until', 'rl_step', 'pkce_verifier', 'setup'].forEach(LS.del);
+    ['access_token', 'refresh_token', 'expires_at', 'blocked_until', 'rl_step', 'rl_src', 'pkce_verifier', 'setup', 'imported_rt'].forEach(LS.del);
   }
   LS.set('client_id', CONFIG.CLIENT_ID);
   if (forced) {
     p.delete('reset');
     const q = p.toString();
-    history.replaceState({}, '', location.pathname + (q ? '?' + q : ''));
+    history.replaceState({}, '', location.pathname + (q ? '?' + q : '') + location.hash);
   }
 })();
 
@@ -685,8 +685,22 @@ async function tokenRequest(params) {
   if (d.refresh_token) LS.set('refresh_token', d.refresh_token);
 }
 
+let setupMode = false;  // true = this page just shows the link and doesn't talk to Spotify
+let loginErr = '';
+
+function showLink() {
+  const rt = LS.get('refresh_token');
+  if (!rt) return false;
+  $('transferUrl').value = REDIRECT + '#rt=' + encodeURIComponent(rt);
+  document.body.classList.remove('needs-login');
+  document.body.classList.add('setup');
+  setupMode = true;
+  return true;
+}
+
 async function handleRedirect() {
   const p = new URLSearchParams(location.search);
+  if (p.has('link')) { showLink(); return; } // ?link re-shows the link on an already connected browser
   if (!p.has('code')) return;
   try {
     await tokenRequest({
@@ -695,13 +709,13 @@ async function handleRedirect() {
       redirect_uri: REDIRECT,
       code_verifier: LS.get('pkce_verifier')
     });
-  } catch (e) { console.error(e); }
-  history.replaceState({}, '', location.pathname);
-  if (LS.get('setup') === '1' && LS.get('refresh_token')) {
-    $('transferUrl').value = REDIRECT + '#rt=' + encodeURIComponent(LS.get('refresh_token'));
-    document.body.classList.add('setup');
+    resetBackoff();
+  } catch (e) {
+    loginErr = 'Spotify login failed (' + (e.status || 'network') + '). Check the redirect URI in the Spotify dashboard.';
   }
+  history.replaceState({}, '', location.pathname);
   LS.del('setup');
+  showLink();
 }
 
 async function getToken() {
@@ -858,6 +872,7 @@ function backoff() { // Retry-After is hidden from browser JS, so back off on ou
   LS.set('rl_step', String(rlStep));
 }
 function clearBackoff() { if (rlStep) { rlStep = 0; LS.set('rl_step', '0'); } }
+function resetBackoff() { blockedUntil = 0; rlStep = 0; LS.set('blocked_until', '0'); LS.set('rl_step', '0'); }
 
 // ---------- Queue shelf (next songs from the Spotify queue) ----------
 let shelfKey = '';
@@ -891,7 +906,7 @@ async function fetchNext() {
     if (!token) return;
     const r = await fetch('https://api.spotify.com/v1/me/player/queue',
       { headers: { Authorization: 'Bearer ' + token } });
-    if (r.status === 429) { backoff(); return; }
+    if (r.status === 429) { LS.set('rl_src', 'queue'); backoff(); return; }
     if (!r.ok) return;
     const d = await r.json();
     showNext((d.queue || []).slice(0, 4));
@@ -1038,6 +1053,7 @@ function enterLockout() {
 }
 
 async function poll() {
+  if (setupMode) return; // showing the link: leave Spotify alone
   let delay = CONFIG.POLL_MS;
   try {
     if (isBlocked()) {
@@ -1051,7 +1067,7 @@ async function poll() {
         document.body.classList.add('needs-login');
         document.body.classList.remove('playing');
         setIdle(false);
-        setStatus('No token: click Connect Spotify');
+        setStatus(loginErr || 'No token: click Connect Spotify');
       } else {
         const r = await fetch(
           'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
@@ -1070,6 +1086,7 @@ async function poll() {
           LS.set('expires_at', '0');
           setStatus('401: token rejected, retrying');
         } else if (r.status === 429) {
+          LS.set('rl_src', 'now-playing');
           backoff();
           delay = blockedUntil - Date.now() + 500;
           enterLockout();
@@ -1087,14 +1104,33 @@ async function poll() {
   if (idleOn) delay = Math.max(delay, CONFIG.IDLE_POLL_MS); // check less often while idle
   setTimeout(poll, delay);
 }
-// Token handed over from a normal browser (see ?setup flow). Only used if this page isn't logged in yet.
+
+// Token handed over from a normal browser (the long link). A new link replaces any older saved login.
 const hashRt = location.hash.match(/rt=([^&]+)/);
 if (hashRt) {
-  if (!LS.get('refresh_token')) {
-    LS.set('refresh_token', decodeURIComponent(hashRt[1]));
+  const t = decodeURIComponent(hashRt[1]);
+  if (LS.get('imported_rt') !== t) {
+    LS.set('refresh_token', t);
     LS.set('expires_at', '0');
+    LS.set('imported_rt', t);
+    resetBackoff();
   }
-  history.replaceState({}, '', location.pathname);
+  history.replaceState({}, '', location.pathname + location.search);
+}
+
+// Add ?debug to the URL to see what the page has saved (bottom right)
+if (new URLSearchParams(location.search).has('debug')) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;right:14px;bottom:12px;z-index:30;font:12px ui-monospace,Menlo,monospace;opacity:.8;text-align:right;white-space:pre;pointer-events:none';
+  document.body.appendChild(d);
+  const upd = () => {
+    const b = Number(LS.get('blocked_until') || 0);
+    d.textContent = 'client ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
+      'login ' + (LS.get('refresh_token') ? 'saved' : 'none') + '\n' +
+      'blocked ' + (b > Date.now() ? 'until ' + new Date(b).toLocaleTimeString() : 'no') +
+      ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')';
+  };
+  upd(); setInterval(upd, 2000);
 }
 
 $('connect').addEventListener('click', login);
