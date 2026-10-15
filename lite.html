@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vinyl Wallpaper Lite</title>
+<style>
+  :root { --ink: #efe9de; --glow: 140,120,110; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0b0a09; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.white-vinyl { --v: #e6e2d8; --groove: rgba(0,0,0,.06); --gap: rgba(0,0,0,.16); --lip: rgba(0,0,0,.14); }
+  body:not(.white-vinyl) { --v: #0e0d0c; --groove: rgba(255,255,255,.03); --gap: rgba(0,0,0,.55); --lip: rgba(255,255,255,.07); }
+
+  /* No animations anywhere on this page. The only transition is a short background crossfade when the song changes. */
+  .bg { position: fixed; inset: 0; opacity: 0; transition: opacity 1.2s ease; }
+  .bg.on { opacity: 1; }
+  body.dark .bg { display: none; }
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 40% 50%, transparent 30%, rgba(0,0,0,.55) 100%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .036 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: auto, 220px 220px;
+  }
+  body.no-grain .vignette { background: radial-gradient(ellipse at 40% 50%, transparent 30%, rgba(0,0,0,.55) 100%); }
+
+  .clock { position: fixed; top: 4.5vh; right: 3.2vw; z-index: 2; text-align: right; }
+  .time { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .date { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; opacity: .42; }
+
+  .main {
+    position: fixed; inset: 0; z-index: 2; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6vmin;
+  }
+  .mainrow { display: flex; align-items: center; gap: 7vmin; }
+  .cover { position: relative; flex: none; width: 58vmin; height: 40vmin; }
+  .sleeve {
+    position: absolute; left: 0; top: 0; z-index: 1; width: 40vmin; height: 40vmin;
+    border-radius: .8vmin; background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 2vmin 6vmin rgba(0,0,0,.6), 0 0 9vmin rgba(var(--glow), .35);
+  }
+  .vinyl {
+    position: absolute; left: 20vmin; top: 1vmin; width: 38vmin; height: 38vmin; border-radius: 50%;
+    background:
+      radial-gradient(circle closest-side,
+        transparent 0 38%, var(--gap) 38% 39%, transparent 39% 52%,
+        var(--gap) 52% 52.5%, transparent 52.5% 64%,
+        var(--gap) 64% 64.5%, transparent 64.5% 76%,
+        var(--gap) 76% 76.5%, transparent 76.5% 88%,
+        var(--gap) 88% 88.5%, transparent 88.5%),
+      repeating-radial-gradient(circle closest-side, var(--groove) 0 .6px, transparent .6px 2.4px),
+      var(--v);
+    box-shadow: inset 0 0 0 .3vmin var(--lip), 0 .6vmin 2.4vmin rgba(0,0,0,.55);
+  }
+  .vinyl::before {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 30deg,
+      transparent 0 4%, rgba(255,255,255,.14) 10%, transparent 18% 54%,
+      rgba(255,255,255,.09) 60%, transparent 68%);
+  }
+  .vlabel {
+    position: absolute; inset: 32%; border-radius: 50%;
+    background: #5b5047 center / cover no-repeat;
+    box-shadow: inset 0 0 0 .3vmin rgba(0,0,0,.3), 0 0 0 .4vmin rgba(0,0,0,.4);
+  }
+  .vlabel::after {
+    content: ""; position: absolute; inset: 43%; border-radius: 50%;
+    background: #0b0a09; box-shadow: 0 0 0 .2vmin rgba(255,255,255,.15);
+  }
+
+  .text { max-width: 34vw; }
+  .eyebrow { font-size: 1.8vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .5; }
+  .title {
+    margin-top: 2vmin; font-size: 5.2vmin; font-weight: 600; line-height: 1.06; letter-spacing: -.025em;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .artist { margin-top: 1.6vmin; font-size: 3vmin; opacity: .6; }
+  .album { margin-top: 1vmin; font-size: 2.2vmin; opacity: .38; }
+  .note { margin-top: 3.4vmin; font-size: 2vmin; letter-spacing: .04em; color: rgb(var(--glow)); opacity: .85; }
+  .note:empty { display: none; }
+
+  .next { display: none; flex-direction: column; align-items: center; gap: 2vmin; }
+  .next.has { display: flex; }
+  .ncap { font-size: 1.6vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .4; }
+  .nrow { display: flex; align-items: flex-end; gap: 2.2vmin; }
+  .nrow i {
+    display: block; width: 8vmin; height: 8vmin; border-radius: 1.2vmin;
+    background: #3a322c center / cover no-repeat;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 .8vmin 2vmin rgba(0,0,0,.5);
+  }
+  .nrow i:nth-child(1) { width: 12vmin; height: 12vmin; box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 .8vmin 2vmin rgba(0,0,0,.5), 0 0 3vmin rgba(var(--glow), .4); }
+  .nrow i:nth-child(2) { opacity: .8; }
+  .nrow i:nth-child(3) { width: 7vmin; height: 7vmin; opacity: .65; }
+  .nrow i:nth-child(4) { width: 6vmin; height: 6vmin; opacity: .5; }
+  .ntext { max-width: 60vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 2.3vmin; font-weight: 500; letter-spacing: -.005em; opacity: .65; }
+
+  /* Login + setup states */
+  .center { position: fixed; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  #connect {
+    display: none; font: inherit; font-size: 18px; font-weight: 500;
+    padding: 12px 26px; border-radius: 999px; border: 0; pointer-events: auto;
+    background: var(--ink); color: #0b0a09; cursor: pointer;
+  }
+  body.needs-login #connect { display: block; }
+  body.needs-login .main, body.setup .main, body.needs-login .clock, body.setup .clock { display: none; }
+  body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
+  body.needs-login #connect { cursor: pointer; }
+  #transfer { display: none; max-width: 34vw; font-size: 16px; line-height: 1.5; pointer-events: auto; }
+  body.setup #transfer { display: block; }
+  #transfer textarea {
+    width: 100%; height: 150px; margin-top: 10px; padding: 10px; border-radius: 8px;
+    font: 13px ui-monospace, Menlo, monospace; color: #111; background: #fff; border: 0;
+  }
+  #status {
+    position: fixed; left: 14px; bottom: 12px; z-index: 20;
+    font: 12px ui-monospace, Menlo, monospace; opacity: .7;
+    pointer-events: none; display: none; max-width: 70vw;
+  }
+  #status.show { display: block; }
+</style>
+</head>
+<body>
+  <div class="bg" id="bg0"></div>
+  <div class="bg" id="bg1"></div>
+  <div class="vignette"></div>
+
+  <div class="clock">
+    <div class="time" id="time"></div>
+    <div class="date" id="date"></div>
+  </div>
+
+  <div class="main">
+    <div class="mainrow">
+      <div class="cover">
+        <div class="vinyl"><div class="vlabel" id="vLabel"></div></div>
+        <div class="sleeve" id="sleeve"></div>
+      </div>
+      <div class="text">
+        <div class="eyebrow" id="eyebrow">Now playing</div>
+        <div class="title" id="title"></div>
+        <div class="artist" id="artist"></div>
+        <div class="album" id="album"></div>
+        <div class="note" id="note"></div>
+      </div>
+    </div>
+    <div class="next" id="next">
+      <div class="ncap">Up next</div>
+      <div class="nrow" id="nRow"></div>
+      <div class="ntext" id="nText"></div>
+    </div>
+  </div>
+
+  <div class="center">
+    <button id="connect">Connect Spotify</button>
+    <div id="transfer">
+      Connected. Copy this whole link and paste it as the website URL in Plash.
+      <textarea id="transferUrl" readonly onclick="this.select()"></textarea>
+    </div>
+  </div>
+  <div id="status"></div>
+
+<script>
+// ---------- CONFIG ----------
+const CONFIG = {
+  CLIENT_ID: '8562a9cb556d4864ab9bfc1d20bb8584',
+  VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
+  BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark'
+  SHOW_NEXT: true,       // "Up next" row under the album
+  GRAIN: true,           // fine film grain in the background
+  CENSOR: true,          // replace explicit words with *
+  EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
+  POLL_MS: 8000,         // how often to check Spotify while music is playing
+  IDLE_POLL_MS: 10000    // how often to check while paused or stopped
+};
+// ----------------------------
+
+const SCOPES = 'user-read-currently-playing user-read-playback-state';
+const REDIRECT = location.origin + location.pathname;
+const $ = id => document.getElementById(id);
+const LS = {
+  get: k => localStorage.getItem(k),
+  set: (k, v) => localStorage.setItem(k, v),
+  del: k => localStorage.removeItem(k)
+};
+
+// Wipe saved Spotify state if the client ID changed, or if the URL has ?reset
+(function () {
+  const p = new URLSearchParams(location.search);
+  const forced = p.has('reset');
+  if (forced || LS.get('client_id') !== CONFIG.CLIENT_ID) {
+    ['access_token', 'refresh_token', 'expires_at', 'blocked_until', 'rl_step', 'rl_src', 'pkce_verifier', 'setup', 'imported_rt'].forEach(LS.del);
+  }
+  LS.set('client_id', CONFIG.CLIENT_ID);
+  if (forced) {
+    p.delete('reset');
+    const q = p.toString();
+    history.replaceState({}, '', location.pathname + (q ? '?' + q : '') + location.hash);
+  }
+})();
+
+document.body.classList.add(CONFIG.BACKGROUND);
+document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
+document.body.classList.toggle('no-grain', !CONFIG.GRAIN);
+
+// ---------- Censoring ----------
+const CONTAINS = ['nigga', 'nigger'];
+const WORDS = ['nigga', 'nigger'];
+const censorRe = new RegExp(
+  '\\b\\w*(?:' + CONTAINS.join('|') + ')\\w*\\b|\\b(?:' +
+  [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
+const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
+
+// ---------- Clock (text updates once a minute) ----------
+function updateClock() {
+  const now = new Date();
+  $('time').textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  $('date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  setTimeout(updateClock, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 50);
+}
+updateClock();
+
+// ---------- Play history (shared with the main page, used to paint instantly on reload) ----------
+let hist = [];
+try { hist = JSON.parse(LS.get('history') || '[]'); } catch (e) { hist = []; }
+const bgUrl = u => u ? `url('${u}')` : 'none';
+
+function recordHist(h) {
+  hist = hist.filter(x => x.id !== h.id && (!h.art || x.art !== h.art)); // one entry per album
+  hist.unshift(h);
+  hist = hist.slice(0, 8);
+  try { LS.set('history', JSON.stringify(hist)); } catch (e) {}
+}
+
+function paint(h) {
+  $('sleeve').style.backgroundImage = bgUrl(h.art);
+  $('vLabel').style.backgroundImage = bgUrl(h.art);
+  $('title').textContent = censor(h.name);
+  $('artist').textContent = censor(h.artist);
+  $('album').textContent = censor(h.album) + (h.year ? ' \u00B7 ' + h.year : '');
+}
+
+// ---------- Spotify auth (PKCE, no client secret needed) ----------
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function login() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  LS.set('pkce_verifier', verifier);
+  LS.set('setup', location.search.includes('setup') ? '1' : '');
+  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    client_id: CONFIG.CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge
+  });
+}
+
+async function tokenRequest(params) {
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: CONFIG.CLIENT_ID, ...params })
+  });
+  if (!r.ok) throw Object.assign(new Error('token request failed'), { status: r.status });
+  const d = await r.json();
+  LS.set('access_token', d.access_token);
+  LS.set('expires_at', String(Date.now() + d.expires_in * 1000 - 60000));
+  if (d.refresh_token) LS.set('refresh_token', d.refresh_token);
+}
+
+let setupMode = false;  // true = this page just shows the link and doesn't talk to Spotify
+let loginErr = '';
+
+function showLink() {
+  const rt = LS.get('refresh_token');
+  if (!rt) return false;
+  $('transferUrl').value = REDIRECT + '#rt=' + encodeURIComponent(rt);
+  document.body.classList.remove('needs-login');
+  document.body.classList.add('setup');
+  setupMode = true;
+  return true;
+}
+
+async function handleRedirect() {
+  const p = new URLSearchParams(location.search);
+  if (p.has('link')) { showLink(); return; } // ?link re-shows the link on an already connected browser
+  if (p.has('error')) { loginErr = 'Spotify said: ' + p.get('error'); history.replaceState({}, '', location.pathname); return; }
+  if (!p.has('code')) return;
+  try {
+    await tokenRequest({
+      grant_type: 'authorization_code',
+      code: p.get('code'),
+      redirect_uri: REDIRECT,
+      code_verifier: LS.get('pkce_verifier')
+    });
+    resetBackoff();
+  } catch (e) {
+    loginErr = 'Spotify login failed (' + (e.status || 'network') + '). Check the redirect URI in the Spotify dashboard.';
+  }
+  history.replaceState({}, '', location.pathname);
+  LS.del('setup');
+  showLink();
+}
+
+async function getToken() {
+  if (Date.now() < Number(LS.get('expires_at') || 0)) return LS.get('access_token');
+  const rt = LS.get('refresh_token');
+  if (!rt) return null;
+  try {
+    await tokenRequest({ grant_type: 'refresh_token', refresh_token: rt });
+    return LS.get('access_token');
+  } catch (e) {
+    // Only drop the login if Spotify rejected it; keep it through network blips.
+    if (e.status === 400 || e.status === 401) ['access_token', 'refresh_token', 'expires_at'].forEach(LS.del);
+    return null;
+  }
+}
+
+// ---------- Color from album art (vinyl tint + glow) ----------
+function extractColor(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 24;
+        const x = c.getContext('2d');
+        x.drawImage(img, 0, 0, 24, 24);
+        const d = x.getImageData(0, 0, 24, 24).data;
+        let r = 0, g = 0, b = 0, w = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const s = Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
+          const wt = s * s + 1; // vivid pixels count more than grays
+          r += d[i] * wt; g += d[i + 1] * wt; b += d[i + 2] * wt; w += wt;
+        }
+        resolve([r / w, g / w, b / w]);
+      } catch (e) { resolve(null); } // canvas blocked by CORS
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+function applyVinyl(rgb) {
+  const s = document.body.style;
+  if (!rgb) { ['--v', '--groove', '--gap', '--lip'].forEach(k => s.removeProperty(k)); return; }
+  const [r, g, b] = rgb.map(v => Math.round(v * .45));
+  s.setProperty('--v', `rgb(${r},${g},${b})`);
+  s.setProperty('--groove', 'rgba(255,255,255,.035)');
+  s.setProperty('--gap', 'rgba(0,0,0,.5)');
+  s.setProperty('--lip', 'rgba(255,255,255,.09)');
+}
+
+// Brighten the average color so the glow is vivid even for dark covers.
+function glowColor(rgb) {
+  if (!rgb) return [140, 120, 110];
+  const m = Math.max(...rgb, 1);
+  const k = Math.min(3.5, 230 / m);
+  return rgb.map(v => Math.min(255, Math.round(v * k)));
+}
+
+function applyGlow(rgb) {
+  const [r, g, b] = glowColor(rgb);
+  document.body.style.setProperty('--glow', `${r},${g},${b}`);
+  return [r, g, b];
+}
+
+let lastArt = null, layer = 0;
+function setBackground(url, rgb) {
+  const layers = [$('bg0'), $('bg1')];
+  layer ^= 1;
+  if (url && rgb) {
+    const [r, g, b] = rgb;
+    layers[layer].style.background =
+      `radial-gradient(ellipse 65% 85% at 35% 50%, rgba(${r},${g},${b},.38), transparent 70%),` +
+      `radial-gradient(ellipse 70% 60% at 95% 100%, rgba(${r},${g},${b},.16), transparent 70%),` +
+      `#0b0a09`;
+  } else {
+    layers[layer].style.background = '#0b0a09';
+  }
+  layers[layer].classList.add('on');
+  layers[layer ^ 1].classList.remove('on');
+}
+
+function setArt(url) {
+  if (url === lastArt) return;
+  lastArt = url;
+  (url ? extractColor(url) : Promise.resolve(null)).then(c => {
+    if (lastArt !== url) return;
+    const glow = applyGlow(c);
+    if (CONFIG.VINYL === 'art') applyVinyl(c);
+    setBackground(url, glow);
+  });
+}
+
+// ---------- Rate-limit guard (shared with the main page, survives reloads) ----------
+let blockedUntil = Number(LS.get('blocked_until') || 0);
+let rlStep = Number(LS.get('rl_step') || 0);
+const isBlocked = () => Date.now() < blockedUntil;
+function backoff() { // Retry-After is hidden from browser JS, so back off on our own: 1, 2, 4, 8, 15 min
+  rlStep = Math.min(rlStep + 1, 5);
+  blockedUntil = Date.now() + Math.min(60000 * Math.pow(2, rlStep - 1), 15 * 60000);
+  LS.set('blocked_until', String(blockedUntil));
+  LS.set('rl_step', String(rlStep));
+}
+function clearBackoff() { if (rlStep) { rlStep = 0; LS.set('rl_step', '0'); } }
+function resetBackoff() { blockedUntil = 0; rlStep = 0; LS.set('blocked_until', '0'); LS.set('rl_step', '0'); }
+
+// ---------- Up next (Spotify queue, only fetched when the song changes and every 2 minutes) ----------
+let nextKey = '';
+function showNext(list) {
+  const key = list.map(n => n.id).join(',');
+  if (key === nextKey) return;
+  nextKey = key;
+  $('next').classList.toggle('has', list.length > 0);
+  if (!list.length) return;
+  $('nRow').innerHTML = list.map(n => {
+    const imgs = (n.album && n.album.images) || n.images || [];
+    const thumb = (imgs[1] || imgs[0] || {}).url;
+    return `<i style="background-image:${bgUrl(thumb)}"></i>`;
+  }).join('');
+  const n = list[0];
+  const who = n.artists ? n.artists.map(a => a.name).join(', ') : (n.show && n.show.publisher) || '';
+  $('nText').textContent = censor(n.name) + ' \u2014 ' + censor(who);
+}
+
+async function fetchNext() {
+  if (CONFIG.SHOW_NEXT === false || isBlocked() || !cur.playing) return;
+  try {
+    const token = await getToken();
+    if (!token) return;
+    const r = await fetch('https://api.spotify.com/v1/me/player/queue',
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (r.status === 429) { LS.set('rl_src', 'queue'); backoff(); return; }
+    if (!r.ok) return;
+    const d = await r.json();
+    showNext((d.queue || []).slice(0, 4));
+  } catch (e) { /* offline: try again later */ }
+}
+setInterval(fetchNext, 120000);
+
+// ---------- Rendering ----------
+const cur = { id: null, progress: 0, duration: 1, stamp: 0, playing: false };
+
+function render(data) {
+  const item = data && data.item;
+  document.body.classList.remove('needs-login');
+  if (!item) {
+    cur.playing = false;
+    $('eyebrow').textContent = hist[0] ? 'Last played' : 'Nothing playing';
+    return;
+  }
+  const imgs = (item.album && item.album.images) || item.images || [];
+  const art = (imgs[0] && imgs[0].url) || null;
+  const thumb = (imgs[1] && imgs[1].url) || art;
+  const artist = item.artists ? item.artists.map(a => a.name).join(', ')
+    : (item.show && item.show.name) || '';
+  const albumName = item.album ? item.album.name : (item.show ? item.show.name : '');
+  const year = item.album && item.album.release_date ? item.album.release_date.slice(0, 4) : '';
+
+  const changed = item.id !== cur.id;
+  cur.id = item.id;
+  cur.progress = data.progress_ms || 0;
+  cur.duration = item.duration_ms || 1;
+  cur.stamp = performance.now();
+  cur.playing = !!data.is_playing;
+
+  $('eyebrow').textContent = cur.playing ? 'Now playing' : 'Paused';
+
+  if (changed) {
+    const h = { id: item.id, art: art || '', thumb: thumb || '', name: item.name, artist: artist, album: albumName, year: year };
+    paint(h);
+    setArt(art);
+    recordHist(h);
+    setTimeout(fetchNext, 1500); // the queue updates a moment after the track changes
+  }
+}
+
+// ---------- Polling ----------
+function setStatus(msg) {
+  const s = $('status');
+  if (!msg) { s.classList.remove('show'); return; }
+  s.textContent = msg;
+  s.classList.add('show');
+}
+const untilText = () => new Date(blockedUntil).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+function enterLockout() {
+  $('note').textContent = 'Spotify is cooling down \u00B7 back around ' + untilText();
+  setStatus('');
+}
+
+let lastPoll = 'waiting for first check';
+
+async function poll() {
+  if (setupMode) { lastPoll = 'paused: this tab is showing the link box'; return; }
+  let delay = CONFIG.POLL_MS;
+  try {
+    if (isBlocked()) {
+      lastPoll = 'blocked, not calling Spotify until ' + untilText();
+      delay = blockedUntil - Date.now() + 500;
+      enterLockout();
+    } else {
+      $('note').textContent = '';
+      const token = await getToken();
+      if (!token) {
+        lastPoll = 'no login saved';
+        document.body.classList.add('needs-login');
+        setStatus(loginErr || 'No token: click Connect Spotify');
+      } else {
+        const r = await fetch(
+          'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode',
+          { headers: { Authorization: 'Bearer ' + token } }
+        );
+        lastPoll = 'HTTP ' + r.status + ' at ' + new Date().toLocaleTimeString();
+        if (r.status === 200) {
+          clearBackoff(); setStatus('');
+          render(await r.json());
+          if (cur.playing) { // wake right as the song ends, so polling can be slow
+            const rem = cur.duration - cur.progress - (performance.now() - cur.stamp);
+            if (rem > 0 && rem + 800 < delay) delay = Math.max(1000, rem + 800);
+          }
+        } else if (r.status === 204) {
+          clearBackoff(); setStatus(''); render(null);
+        } else if (r.status === 401) {
+          LS.set('expires_at', '0');
+          setStatus('401: token rejected, retrying');
+        } else if (r.status === 429) {
+          let why = '';
+          try { why = (await r.text()).slice(0, 120); } catch (e) {}
+          LS.set('rl_src', 'now-playing ' + why);
+          backoff();
+          delay = blockedUntil - Date.now() + 500;
+          enterLockout();
+        } else {
+          let body = '';
+          try { body = (await r.text()).slice(0, 160); } catch (e) {}
+          setStatus('Spotify returned ' + r.status + ' ' + body);
+          delay = Math.max(delay, 10000);
+        }
+      }
+    }
+  } catch (e) {
+    lastPoll = 'error: ' + (e && e.message ? e.message : e);
+    setStatus('Error: ' + (e && e.message ? e.message : e));
+  }
+  if (!cur.playing) delay = Math.max(delay, CONFIG.IDLE_POLL_MS); // check less often while paused or stopped
+  setTimeout(poll, delay);
+}
+
+// Token handed over from a normal browser (the long link). A new link replaces any older saved login.
+const hashRt = location.hash.match(/rt=([^&]+)/);
+if (hashRt) {
+  const t = decodeURIComponent(hashRt[1]);
+  if (LS.get('imported_rt') !== t) {
+    LS.set('refresh_token', t);
+    LS.set('expires_at', '0');
+    LS.set('imported_rt', t);
+    resetBackoff();
+  }
+  history.replaceState({}, '', location.pathname + location.search);
+}
+
+// Add ?debug to the URL to see what the page has saved (bottom right)
+if (new URLSearchParams(location.search).has('debug')) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;right:14px;bottom:12px;z-index:30;font:12px ui-monospace,Menlo,monospace;opacity:.8;text-align:right;white-space:pre;pointer-events:none';
+  document.body.appendChild(d);
+  const upd = () => {
+    const b = Number(LS.get('blocked_until') || 0);
+    d.textContent = 'redirect ' + REDIRECT + '\n' +
+      'client ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
+      'login ' + (LS.get('refresh_token') ? 'saved' : 'none') + '\n' +
+      'blocked ' + (b > Date.now() ? 'until ' + new Date(b).toLocaleTimeString() : 'no') +
+      ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')\n' +
+      'last poll ' + lastPoll;
+  };
+  upd(); setInterval(upd, 2000);
+}
+
+$('connect').addEventListener('click', login);
+if (hist[0]) { paint(hist[0]); setArt(hist[0].art); $('eyebrow').textContent = 'Last played'; } // paint instantly on reload
+handleRedirect().then(poll);
+</script>
+</body>
+</html>
