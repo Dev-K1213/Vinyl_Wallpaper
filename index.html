@@ -532,6 +532,21 @@ const LS = {
   del: k => localStorage.removeItem(k)
 };
 
+// Wipe saved Spotify state if the client ID changed, or if the URL has ?reset
+(function () {
+  const p = new URLSearchParams(location.search);
+  const forced = p.has('reset');
+  if (forced || LS.get('client_id') !== CONFIG.CLIENT_ID) {
+    ['access_token', 'refresh_token', 'expires_at', 'blocked_until', 'rl_step', 'pkce_verifier', 'setup'].forEach(LS.del);
+  }
+  LS.set('client_id', CONFIG.CLIENT_ID);
+  if (forced) {
+    p.delete('reset');
+    const q = p.toString();
+    history.replaceState({}, '', location.pathname + (q ? '?' + q : ''));
+  }
+})();
+
 document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 document.body.classList.toggle('smooth-ring', !!CONFIG.SMOOTH_RING);
