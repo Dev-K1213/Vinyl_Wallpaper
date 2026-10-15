@@ -902,6 +902,8 @@ function tick() {
 }
 
 // ---------- Polling ----------
+let rlStep = 0; // consecutive 429 responses
+
 function setStatus(msg) {
   const s = $('status');
   if (!msg) { s.classList.remove('show'); return; }
@@ -924,17 +926,21 @@ async function poll() {
         { headers: { Authorization: 'Bearer ' + token } }
       );
       if (r.status === 200) {
+        rlStep = 0;
         setStatus('');
         render(await r.json());
       } else if (r.status === 204) {
+        rlStep = 0;
         setStatus('');
         render(null);
       } else if (r.status === 401) {
         LS.set('expires_at', '0');
         setStatus('401: token rejected, retrying');
       } else if (r.status === 429) {
-        delay = Math.max((Number(r.headers.get('Retry-After')) || 0) * 1000, 30000);
-        setStatus('429: rate limited, waiting ' + Math.round(delay / 1000) + 's');
+        const ra = r.headers.get('Retry-After');
+        rlStep = Math.min(rlStep + 1, 5);
+        delay = Math.max((Number(ra) || 0) * 1000, 30000 * rlStep);
+        setStatus('429: waiting ' + Math.round(delay / 1000) + 's (Retry-After: ' + (ra === null ? 'not readable' : ra) + ')');
       } else {
         let body = '';
         try { body = (await r.text()).slice(0, 160); } catch (e) {}
