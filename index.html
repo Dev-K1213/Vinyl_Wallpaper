@@ -701,6 +701,7 @@ function showLink() {
 async function handleRedirect() {
   const p = new URLSearchParams(location.search);
   if (p.has('link')) { showLink(); return; } // ?link re-shows the link on an already connected browser
+  if (p.has('error')) { loginErr = 'Spotify said: ' + p.get('error'); history.replaceState({}, '', location.pathname); return; }
   if (!p.has('code')) return;
   try {
     await tokenRequest({
@@ -1125,7 +1126,7 @@ if (new URLSearchParams(location.search).has('debug')) {
   document.body.appendChild(d);
   const upd = () => {
     const b = Number(LS.get('blocked_until') || 0);
-    d.textContent = 'client ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
+  d.textContent = 'redirect ' + REDIRECT + '\nclient ' + CONFIG.CLIENT_ID.slice(0, 6) + '...\n' +
       'login ' + (LS.get('refresh_token') ? 'saved' : 'none') + '\n' +
       'blocked ' + (b > Date.now() ? 'until ' + new Date(b).toLocaleTimeString() : 'no') +
       ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')';
