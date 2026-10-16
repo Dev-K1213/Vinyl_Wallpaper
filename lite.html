@@ -37,7 +37,8 @@
   .wxtemp { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
   .wxline { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; opacity: .42; }
 
-  .ev { display: none; flex-direction: column; align-items: flex-end; margin-top: 4vmin; }
+  .ev { display: none; flex-direction: column; align-items: flex-end; }
+  .ev.has + .wx { margin-top: 4vmin; }
   .ev.has { display: flex; }
   .evcap { font-size: 1.5vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .4; }
   .ev.live .evcap { color: rgb(var(--glow)); opacity: .9; }
@@ -146,15 +147,15 @@
   <div class="vignette"></div>
 
   <div class="corner">
-    <div class="wx" id="wx">
-      <div class="wxtemp" id="wxTemp"></div>
-      <div class="wxline" id="wxLine"></div>
-    </div>
     <div class="ev" id="ev">
       <div class="evcap" id="evCap">Next event</div>
       <div class="evtitle" id="evTitle"></div>
       <div class="evwhen" id="evWhen"></div>
       <div class="evwhere" id="evWhere"></div>
+    </div>
+    <div class="wx" id="wx">
+      <div class="wxtemp" id="wxTemp"></div>
+      <div class="wxline" id="wxLine"></div>
     </div>
   </div>
 
@@ -271,7 +272,10 @@ function wxLabel(code, day) {
 function paintWx(w) {
   if (!w) return;
   $('wxTemp').textContent = w.t + '\u00B0';
-  $('wxLine').textContent = wxLabel(w.code, w.day) + ' \u00B7 H ' + w.hi + '\u00B0 L ' + w.lo + '\u00B0' + (w.pop >= 30 ? ' \u00B7 ' + w.pop + '% rain' : '');
+  const lbl = wxLabel(w.code, w.day);
+  const wet = /rain|drizzle|snow|thunder/i.test(lbl); // the condition already says it, so don't repeat the word
+  $('wxLine').textContent = lbl + ' \u00B7 H ' + w.hi + '\u00B0 L ' + w.lo + '\u00B0' +
+    (w.pop >= 30 ? ' \u00B7 ' + w.pop + (wet ? '% chance' : '% rain') : '');
   $('wx').classList.add('has');
 }
 
@@ -382,6 +386,23 @@ if (CONFIG.SHOW_CALENDAR !== false) {
   loadCal();
   setInterval(loadCal, 10 * 60 * 1000);
 }
+
+// ---------- Refresh when the Mac wakes up ----------
+let lastWakeCal = Date.now(), lastWakeWx = Date.now();
+function wake() {
+  const now = Date.now();
+  if (now - lastWakeCal > 20000) { lastWakeCal = now; loadCal(); }                // calendar, at most every 20s
+  if (now - lastWakeWx > 5 * 60 * 1000) { lastWakeWx = now; loadWeather(); }      // weather, at most every 5 min
+  paintCal();                                                                     // drop any event that ended during sleep
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+window.addEventListener('focus', wake);
+window.addEventListener('pageshow', wake);
+window.addEventListener('online', wake);
+// Safety net in case the web view doesn't announce the wake: a timer that fires very late means the Mac was asleep.
+let lastBeat = Date.now();
+setInterval(() => { const n = Date.now(); if (n - lastBeat > 150000) wake(); lastBeat = n; }, 60000);
+
 
 // ---------- Play history (shared with the main page, used to paint instantly on reload) ----------
 let hist = [];
