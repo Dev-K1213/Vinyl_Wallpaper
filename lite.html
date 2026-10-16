@@ -29,17 +29,25 @@
   }
   body.no-grain .vignette { background: radial-gradient(ellipse at 40% 50%, transparent 30%, rgba(0,0,0,.55) 100%); }
 
-  .clock { position: fixed; top: 4.5vh; right: 3.2vw; z-index: 2; text-align: right; }
-  .time { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-  .date { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; opacity: .42; }
+  /* Top-right corner: weather, then the next calendar event */
+  .corner { position: fixed; top: 4.5vh; right: 3.2vw; z-index: 2; text-align: right; max-width: 30vw; }
 
-  /* Weather, under the clock */
-  .wx { display: none; flex-direction: column; align-items: flex-end; margin-top: 2.2vmin; }
+  .wx { display: none; flex-direction: column; align-items: flex-end; }
   .wx.has { display: flex; }
-  .wxmain { display: flex; align-items: center; gap: 1.2vmin; }
-  .wxicon { font-size: 4.4vmin; line-height: 1; }
   .wxtemp { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
   .wxline { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; opacity: .42; }
+
+  .ev { display: none; flex-direction: column; align-items: flex-end; margin-top: 4vmin; }
+  .ev.has { display: flex; }
+  .evcap { font-size: 1.5vmin; font-weight: 600; letter-spacing: .3em; text-transform: uppercase; opacity: .4; }
+  .ev.live .evcap { color: rgb(var(--glow)); opacity: .9; }
+  .evtitle {
+    margin-top: 1vmin; font-size: 2.8vmin; font-weight: 500; line-height: 1.12; letter-spacing: -.01em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .evwhen { margin-top: .8vmin; font-size: 1.9vmin; opacity: .55; font-variant-numeric: tabular-nums; }
+  .evwhere { margin-top: .5vmin; max-width: 100%; font-size: 1.7vmin; opacity: .38; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .evwhere:empty { display: none; }
 
   .main {
     position: fixed; inset: 0; z-index: 2; pointer-events: none;
@@ -115,7 +123,7 @@
     background: var(--ink); color: #0b0a09; cursor: pointer;
   }
   body.needs-login #connect { display: block; }
-  body.needs-login .main, body.setup .main, body.needs-login .clock, body.setup .clock { display: none; }
+  body.needs-login .main, body.setup .main, body.needs-login .corner, body.setup .corner { display: none; }
   body.needs-login, body.needs-login *, body.setup, body.setup * { cursor: default; }
   body.needs-login #connect { cursor: pointer; }
   #transfer { display: none; max-width: 34vw; font-size: 16px; line-height: 1.5; pointer-events: auto; }
@@ -137,12 +145,16 @@
   <div class="bg" id="bg1"></div>
   <div class="vignette"></div>
 
-  <div class="clock">
-    <div class="time" id="time"></div>
-    <div class="date" id="date"></div>
+  <div class="corner">
     <div class="wx" id="wx">
-      <div class="wxmain"><span class="wxicon" id="wxIcon"></span><span class="wxtemp" id="wxTemp"></span></div>
+      <div class="wxtemp" id="wxTemp"></div>
       <div class="wxline" id="wxLine"></div>
+    </div>
+    <div class="ev" id="ev">
+      <div class="evcap" id="evCap">Next event</div>
+      <div class="evtitle" id="evTitle"></div>
+      <div class="evwhen" id="evWhen"></div>
+      <div class="evwhere" id="evWhere"></div>
     </div>
   </div>
 
@@ -183,7 +195,8 @@ const CONFIG = {
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
   BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark'
   SHOW_NEXT: true,       // "Up next" row under the album
-  SHOW_WEATHER: true,    // weather under the clock
+  SHOW_WEATHER: true,    // weather in the top right
+  SHOW_CALENDAR: true,   // next Google Calendar event under the weather (needs the Apps Script link)
   GRAIN: true,           // fine film grain in the background
   CENSOR: true,          // replace explicit words with *
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
@@ -219,6 +232,16 @@ const LS = {
   }
 })();
 
+// Calendar link handed over in the URL as #...&cal=<apps script link>. It's saved here in the browser,
+// never in this file, so it doesn't end up in your public GitHub repo.
+(function () {
+  const m = location.hash.match(/cal=([^&]+)/);
+  if (m) {
+    const u = decodeURIComponent(m[1]);
+    if (LS.get('cal_url') !== u) { LS.set('cal_url', u); LS.del('cal_cache'); }
+  }
+})();
+
 document.body.classList.add(CONFIG.BACKGROUND);
 document.body.classList.toggle('white-vinyl', CONFIG.VINYL === 'white');
 document.body.classList.toggle('no-grain', !CONFIG.GRAIN);
@@ -231,35 +254,24 @@ const censorRe = new RegExp(
   [...WORDS, ...CONFIG.EXTRA_WORDS].join('|') + ')(?:s|es|y|ing|ed|er|ers|in)?\\b', 'gi');
 const censor = t => (CONFIG.CENSOR && t ? t.replace(censorRe, '*****') : t);
 
-// ---------- Clock (text updates once a minute) ----------
-function updateClock() {
-  const now = new Date();
-  $('time').textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  $('date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-  setTimeout(updateClock, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 50);
-}
-updateClock();
-
 // ---------- Weather (Open-Meteo, one small request every 20 minutes) ----------
-function wxInfo(code, day) {
-  if (code <= 1) return day ? ['\u2600\uFE0F', 'Sunny'] : ['\uD83C\uDF19', 'Clear'];
-  if (code === 2) return day ? ['\u26C5', 'Partly cloudy'] : ['\u2601\uFE0F', 'Partly cloudy'];
-  if (code === 3) return ['\u2601\uFE0F', 'Cloudy'];
-  if (code === 45 || code === 48) return ['\uD83C\uDF2B\uFE0F', 'Fog'];
-  if (code >= 51 && code <= 57) return ['\uD83C\uDF26\uFE0F', 'Drizzle'];
-  if (code === 66 || code === 67) return ['\uD83C\uDF27\uFE0F', 'Freezing rain'];
-  if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82)) return ['\uD83C\uDF27\uFE0F', 'Rain'];
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['\u2744\uFE0F', 'Snow'];
-  if (code >= 95) return ['\u26C8\uFE0F', 'Thunderstorm'];
-  return ['\u2601\uFE0F', 'Cloudy'];
+function wxLabel(code, day) {
+  if (code <= 1) return day ? 'Sunny' : 'Clear';
+  if (code === 2) return 'Partly cloudy';
+  if (code === 3) return 'Cloudy';
+  if (code === 45 || code === 48) return 'Fog';
+  if (code >= 51 && code <= 57) return 'Drizzle';
+  if (code === 66 || code === 67) return 'Freezing rain';
+  if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82)) return 'Rain';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'Snow';
+  if (code >= 95) return 'Thunderstorm';
+  return 'Cloudy';
 }
 
 function paintWx(w) {
   if (!w) return;
-  const info = wxInfo(w.code, w.day);
-  $('wxIcon').textContent = info[0];
   $('wxTemp').textContent = w.t + '\u00B0';
-  $('wxLine').textContent = info[1] + ' \u00B7 H ' + w.hi + '\u00B0 L ' + w.lo + '\u00B0' + (w.pop >= 30 ? ' \u00B7 ' + w.pop + '% rain' : '');
+  $('wxLine').textContent = wxLabel(w.code, w.day) + ' \u00B7 H ' + w.hi + '\u00B0 L ' + w.lo + '\u00B0' + (w.pop >= 30 ? ' \u00B7 ' + w.pop + '% rain' : '');
   $('wx').classList.add('has');
 }
 
@@ -294,6 +306,83 @@ if (CONFIG.SHOW_WEATHER !== false) {
   setInterval(loadWeather, 20 * 60 * 1000);
 }
 
+// ---------- Calendar (your own Google Apps Script link, one small request every 10 minutes) ----------
+let calEvents = [], calTimer = null, calState = 'off';
+const calUrl = () => LS.get('cal_url') || '';
+const fmtClock = ts => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+function dayLabel(ts) {
+  const d = new Date(ts), t = new Date();
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const diff = Math.round((a - b) / 86400000);
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff < 7) return d.toLocaleDateString([], { weekday: 'long' });
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function prepEvents(list) {
+  return (list || []).map(e => {
+    let s, en;
+    if (e.allDay) { // all-day events come as plain dates; read them as local midnight
+      const a = String(e.start).split('-'), b = String(e.end).split('-');
+      s = new Date(+a[0], +a[1] - 1, +a[2]).getTime();
+      en = new Date(+b[0], +b[1] - 1, +b[2]).getTime();
+    } else {
+      s = Date.parse(e.start); en = Date.parse(e.end);
+    }
+    return { title: e.title || 'Untitled', where: e.where || '', allDay: !!e.allDay, s: s, e: en };
+  }).filter(x => !isNaN(x.s) && !isNaN(x.e)).sort((a, b) => a.s - b.s);
+}
+
+function paintCal() {
+  clearTimeout(calTimer); calTimer = null;
+  const box = $('ev');
+  const now = Date.now();
+  const upcoming = calEvents.filter(x => x.e > now); // not ended yet
+  const ev = upcoming.filter(x => !x.allDay)[0] || upcoming[0]; // prefer a timed event over an all-day one
+  if (!ev) { box.classList.remove('has', 'live'); return; }
+  const going = ev.s <= now && now < ev.e;
+  box.classList.add('has');
+  box.classList.toggle('live', going);
+  $('evCap').textContent = going ? 'Happening now' : 'Next event';
+  $('evTitle').textContent = censor(ev.title);
+  let when;
+  if (ev.allDay) when = (ev.s <= now ? 'Today' : dayLabel(ev.s)) + ' \u00B7 All day';
+  else if (going) when = 'Until ' + fmtClock(ev.e);
+  else when = dayLabel(ev.s) + ' \u00B7 ' + fmtClock(ev.s);
+  $('evWhen').textContent = when;
+  $('evWhere').textContent = ev.where ? censor(ev.where) : '';
+  // wake exactly when the display should change (the event starts or ends), no polling
+  const nextChange = going ? ev.e : ev.s;
+  calTimer = setTimeout(paintCal, Math.min(Math.max(nextChange - now + 1000, 1000), 20 * 60 * 1000));
+}
+
+async function loadCal() {
+  if (CONFIG.SHOW_CALENDAR === false) return;
+  const url = calUrl();
+  if (!url) { calState = 'no link saved'; return; }
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { calState = 'HTTP ' + r.status; return; }
+    const d = await r.json();
+    if (!d || !Array.isArray(d.events)) { calState = 'error: ' + (d && d.error ? d.error : 'unexpected reply'); return; }
+    calEvents = prepEvents(d.events);
+    calState = 'ok, ' + calEvents.length + ' events';
+    try { LS.set('cal_cache', JSON.stringify({ at: Date.now(), events: d.events })); } catch (e) {}
+    paintCal();
+  } catch (e) { calState = 'error: ' + (e && e.message ? e.message : e); }
+}
+if (CONFIG.SHOW_CALENDAR !== false) {
+  try { // paint the last reading instantly on reload, if it's less than 6 hours old
+    const c = JSON.parse(LS.get('cal_cache') || 'null');
+    if (c && Date.now() - c.at < 6 * 3600 * 1000) { calEvents = prepEvents(c.events); paintCal(); }
+  } catch (e) {}
+  loadCal();
+  setInterval(loadCal, 10 * 60 * 1000);
+}
+
 // ---------- Play history (shared with the main page, used to paint instantly on reload) ----------
 let hist = [];
 try { hist = JSON.parse(LS.get('history') || '[]'); } catch (e) { hist = []; }
@@ -315,6 +404,7 @@ function paint(h) {
 }
 
 // ---------- Spotify auth (PKCE, no client secret needed) ----------
+const SCOPES_UNUSED = null;
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf)))
   .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -627,8 +717,9 @@ async function poll() {
   setTimeout(poll, delay);
 }
 
-// Token handed over from a normal browser (the long link). A new link replaces any older saved login.
+// Tokens handed over in the URL (#rt=... for Spotify, #cal=... for the calendar). Saved here, then removed from the address.
 const hashRt = location.hash.match(/rt=([^&]+)/);
+const hashCal = location.hash.match(/cal=([^&]+)/);
 if (hashRt) {
   const t = decodeURIComponent(hashRt[1]);
   if (LS.get('imported_rt') !== t) {
@@ -637,8 +728,8 @@ if (hashRt) {
     LS.set('imported_rt', t);
     resetBackoff();
   }
-  history.replaceState({}, '', location.pathname + location.search);
 }
+if (hashRt || hashCal) history.replaceState({}, '', location.pathname + location.search);
 
 // Add ?debug to the URL to see what the page has saved (bottom right)
 if (new URLSearchParams(location.search).has('debug')) {
@@ -652,6 +743,7 @@ if (new URLSearchParams(location.search).has('debug')) {
       'login ' + (LS.get('refresh_token') ? 'saved' : 'none') + '\n' +
       'blocked ' + (b > Date.now() ? 'until ' + new Date(b).toLocaleTimeString() : 'no') +
       ' (step ' + (LS.get('rl_step') || 0) + ', by ' + (LS.get('rl_src') || '-') + ')\n' +
+      'calendar ' + calState + '\n' +
       'last poll ' + lastPoll;
   };
   upd(); setInterval(upd, 2000);
