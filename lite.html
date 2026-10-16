@@ -33,6 +33,14 @@
   .time { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
   .date { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; opacity: .42; }
 
+  /* Weather, under the clock */
+  .wx { display: none; flex-direction: column; align-items: flex-end; margin-top: 2.2vmin; }
+  .wx.has { display: flex; }
+  .wxmain { display: flex; align-items: center; gap: 1.2vmin; }
+  .wxicon { font-size: 4.4vmin; line-height: 1; }
+  .wxtemp { font-size: 3.8vmin; font-weight: 300; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .wxline { margin-top: .8vmin; font-size: 1.7vmin; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; opacity: .42; }
+
   .main {
     position: fixed; inset: 0; z-index: 2; pointer-events: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6vmin;
@@ -132,6 +140,10 @@
   <div class="clock">
     <div class="time" id="time"></div>
     <div class="date" id="date"></div>
+    <div class="wx" id="wx">
+      <div class="wxmain"><span class="wxicon" id="wxIcon"></span><span class="wxtemp" id="wxTemp"></span></div>
+      <div class="wxline" id="wxLine"></div>
+    </div>
   </div>
 
   <div class="main">
@@ -171,6 +183,7 @@ const CONFIG = {
   VINYL: 'art',          // 'art' (color from album cover) | 'black' | 'white'
   BACKGROUND: 'art',     // 'art' (colored glow from album art) | 'dark'
   SHOW_NEXT: true,       // "Up next" row under the album
+  SHOW_WEATHER: true,    // weather under the clock
   GRAIN: true,           // fine film grain in the background
   CENSOR: true,          // replace explicit words with *
   EXTRA_WORDS: [],       // add your own words to censor, e.g. ['heck']
@@ -178,6 +191,9 @@ const CONFIG = {
   IDLE_POLL_MS: 10000    // how often to check while paused or stopped
 };
 // ----------------------------
+
+// Weather location (change LAT/LON for somewhere else)
+const WEATHER = { LAT: 40.4259, LON: -86.9081, UNITS: 'fahrenheit' }; // 'fahrenheit' | 'celsius'
 
 const SCOPES = 'user-read-currently-playing user-read-playback-state';
 const REDIRECT = location.origin + location.pathname;
@@ -223,6 +239,60 @@ function updateClock() {
   setTimeout(updateClock, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 50);
 }
 updateClock();
+
+// ---------- Weather (Open-Meteo, one small request every 20 minutes) ----------
+function wxInfo(code, day) {
+  if (code <= 1) return day ? ['\u2600\uFE0F', 'Sunny'] : ['\uD83C\uDF19', 'Clear'];
+  if (code === 2) return day ? ['\u26C5', 'Partly cloudy'] : ['\u2601\uFE0F', 'Partly cloudy'];
+  if (code === 3) return ['\u2601\uFE0F', 'Cloudy'];
+  if (code === 45 || code === 48) return ['\uD83C\uDF2B\uFE0F', 'Fog'];
+  if (code >= 51 && code <= 57) return ['\uD83C\uDF26\uFE0F', 'Drizzle'];
+  if (code === 66 || code === 67) return ['\uD83C\uDF27\uFE0F', 'Freezing rain'];
+  if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82)) return ['\uD83C\uDF27\uFE0F', 'Rain'];
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['\u2744\uFE0F', 'Snow'];
+  if (code >= 95) return ['\u26C8\uFE0F', 'Thunderstorm'];
+  return ['\u2601\uFE0F', 'Cloudy'];
+}
+
+function paintWx(w) {
+  if (!w) return;
+  const info = wxInfo(w.code, w.day);
+  $('wxIcon').textContent = info[0];
+  $('wxTemp').textContent = w.t + '\u00B0';
+  $('wxLine').textContent = info[1] + ' \u00B7 H ' + w.hi + '\u00B0 L ' + w.lo + '\u00B0' + (w.pop >= 30 ? ' \u00B7 ' + w.pop + '% rain' : '');
+  $('wx').classList.add('has');
+}
+
+async function loadWeather() {
+  if (CONFIG.SHOW_WEATHER === false) return;
+  try {
+    const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + WEATHER.LAT + '&longitude=' + WEATHER.LON +
+      '&current=temperature_2m,weather_code,is_day' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&temperature_unit=' + WEATHER.UNITS + '&timezone=auto&forecast_days=1');
+    if (!r.ok) return;
+    const d = await r.json();
+    const w = {
+      t: Math.round(d.current.temperature_2m),
+      code: d.current.weather_code,
+      day: d.current.is_day === 1,
+      hi: Math.round(d.daily.temperature_2m_max[0]),
+      lo: Math.round(d.daily.temperature_2m_min[0]),
+      pop: Math.round(d.daily.precipitation_probability_max[0] || 0),
+      at: Date.now()
+    };
+    try { LS.set('wx_cache', JSON.stringify(w)); } catch (e) {}
+    paintWx(w);
+  } catch (e) { /* offline: keep what's showing */ }
+}
+if (CONFIG.SHOW_WEATHER !== false) {
+  try { // paint the last reading instantly on reload, if it's less than 3 hours old
+    const c = JSON.parse(LS.get('wx_cache') || 'null');
+    if (c && Date.now() - c.at < 3 * 3600 * 1000) paintWx(c);
+  } catch (e) {}
+  loadWeather();
+  setInterval(loadWeather, 20 * 60 * 1000);
+}
 
 // ---------- Play history (shared with the main page, used to paint instantly on reload) ----------
 let hist = [];
